@@ -1,6 +1,8 @@
 package net.blacklab.lmr.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -12,6 +14,10 @@ import java.util.Map;
 import net.blacklab.lib.classutil.FileClassUtil;
 import net.blacklab.lmr.LittleMaidReengaged;
 import net.minecraftforge.fml.relauncher.FMLInjectionData;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.commons.RemappingClassAdapter;
 
 public class FileList {
 
@@ -29,6 +35,105 @@ public class FileList {
 			super.addURL(url);
 		}
 
+		@Override
+		public Class<?> loadClass(String name) throws ClassNotFoundException {
+			LittleMaidReengaged.Debug("loadClass:".concat(name));
+			try {
+				if (name.contains(".")) {
+					// 追加のマルチモデルらしきクラス以外は普通に読み込む
+					return super.loadClass(name);
+				}
+			} catch (NoClassDefFoundError e) {
+				// noop
+			}
+
+			LittleMaidReengaged.Debug("Remapping class:".concat(name));
+			String classFilename = name.replace('.', '/').concat(".class");
+			LittleMaidReengaged.Debug(classFilename);
+			try {
+				// .classファイルをバイナリとして読み込む
+				InputStream input = getResourceAsStream(classFilename);
+				ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+				int data = 0;
+				data = input.read();
+				while (data != -1) {
+					buffer.write(data);
+					data = input.read();
+				}
+				input.close();
+
+				byte[] originalBytecode = buffer.toByteArray();
+				byte[] remappedBytecode;
+
+				// MMM_ほにゃららクラスを参照している部分を、すべて書き換える
+				remappedBytecode = rewirteBaseMMMClassName(originalBytecode);
+
+				// DEBUG: .classファイルを出力する
+				/*
+				FileOutputStream fos = new FileOutputStream(name.concat(".class"));
+				fos.write(remappedBytecode);
+				fos.close();
+				*/
+
+				// バイナリからクラスを生成する
+				return defineClass(name, remappedBytecode, 0, remappedBytecode.length);
+			} catch (Exception e1) {
+				// それでも読み込めないものはしょうがない
+				e1.printStackTrace();
+				throw new ClassNotFoundException(name);
+			}
+		}
+
+		private byte[] rewirteBaseMMMClassName(byte[] bytecode) {
+			ClassReader classReader = new ClassReader(bytecode);
+			ClassWriter classWriter = new ClassWriter(classReader, 0);
+
+			Remapper remapper = new MMMClassRemapper();
+			classReader.accept(new RemappingClassAdapter(classWriter, remapper), ClassReader.EXPAND_FRAMES);
+
+			return classWriter.toByteArray();
+		}
+	}
+
+	public static class MMMClassRemapper extends Remapper {
+		@Override
+		public String map(String typeName) {
+			/// MMM_から始まるクラスの代わりにnet.blacklab.lmr.entity.maidmodelパッケージのクラスを使う
+			boolean isMMM;
+			try {
+				isMMM = "MMM_".equals(typeName.substring(0, 4));
+			} catch (StringIndexOutOfBoundsException e) {
+				isMMM = false;
+			}
+			if (isMMM) {
+				try {
+					Class<?> aClass = Class.forName("net.blacklab.lmr.entity.maidmodel.".concat(typeName.substring(4)));
+					return aClass.getCanonicalName().replace(".", "/");
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+			}
+			return super.map(typeName);
+		}
+
+		@Override
+		public String mapType(String typeName) {
+			boolean isMMM;
+			try {
+				isMMM = "MMM_".equals(typeName.substring(0, 4));
+			} catch (StringIndexOutOfBoundsException e) {
+				isMMM = false;
+			}
+			if (isMMM) {
+				try {
+					Class<?> aClass = Class.forName("net.blacklab.lmr.entity.maidmodel.".concat(typeName.substring(4)));
+					return aClass.getCanonicalName().replace(".", "/");
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+			}
+			return super.mapType(typeName);
+		}
 	}
 
 	public static File dirMinecraft;
