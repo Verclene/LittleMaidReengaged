@@ -3,7 +3,8 @@ package net.blacklab.lmr.inventory;
 import java.util.Iterator;
 import java.util.List;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lib.minecraft.item.ItemUtil;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.util.helper.ItemHelper;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockTNT;
@@ -26,6 +27,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.Explosion;
+import net.minecraftforge.oredict.OreDictionary;
 
 public class InventoryLittleMaid extends InventoryPlayer {
 
@@ -119,7 +121,7 @@ public class InventoryLittleMaid extends InventoryPlayer {
 
 	@Override
 	public String getName() {
-		return "InsideSkirt";
+		return "LOSE";
 	}
 
 	@Override
@@ -338,8 +340,8 @@ public class InventoryLittleMaid extends InventoryPlayer {
 
 	public int getInventorySlotContainItem(Item item) {
 		// 指定されたアイテムIDの物を持っていれば返す
-		for (int j = 0; j < InventoryLittleMaid.maxInventorySize; j++) {
-			if (mainInventory[j] != null && mainInventory[j].getItem() == item) {
+		for (int j = 0; j < getSizeInventory(); j++) {
+			if (getStackInSlot(j) != null && getStackInSlot(j).getItem() == item) {
 				return j;
 			}
 		}
@@ -349,12 +351,12 @@ public class InventoryLittleMaid extends InventoryPlayer {
 
 	public int getInventorySlotContainItem(Class<? extends Item> itemClass) {
 		// 指定されたアイテムクラスの物を持っていれば返す
-		for (int j = 0; j < InventoryLittleMaid.maxInventorySize; j++) {
+		for (int j = 0; j < getSizeInventory(); j++) {
 			// if (mainInventory[j] != null &&
 			// mainInventory[j].getItem().getClass().isAssignableFrom(itemClass))
 			// {
-			if (mainInventory[j] != null
-					&& itemClass.isAssignableFrom(mainInventory[j].getItem().getClass())) {
+			if (getStackInSlot(j) != null
+					&& itemClass.isAssignableFrom(getStackInSlot(j).getItem().getClass())) {
 				return j;
 			}
 		}
@@ -363,10 +365,13 @@ public class InventoryLittleMaid extends InventoryPlayer {
 	}
 
 	protected int getInventorySlotContainItemAndDamage(Item item, int damege) {
-		// とダメージ値
-		for (int i = 0; i < InventoryLittleMaid.maxInventorySize; i++) {
-			if (mainInventory[i] != null && mainInventory[i].getItem() == item
-					&& mainInventory[i].getItemDamage() == damege) {
+		if (damege == OreDictionary.WILDCARD_VALUE) {
+			return getInventorySlotContainItem(item);
+		}
+
+		for (int i = 0; i < getSizeInventory(); i++) {
+			if (getStackInSlot(i) != null && getStackInSlot(i).getItem() == item
+					&& getStackInSlot(i).getItemDamage() == damege) {
 				return i;
 			}
 		}
@@ -388,12 +393,16 @@ public class InventoryLittleMaid extends InventoryPlayer {
 
 	public int getInventorySlotContainItemFood() {
 		// インベントリの最初の食料を返す
-		for (int j = 0; j < InventoryLittleMaid.maxInventorySize; j++) {
-			ItemStack mi = mainInventory[j];
-			if (mi != null && mi.getItem() instanceof ItemFood) {
-				if (((ItemFood) mi.getItem()).getHealAmount(mi) > 0) {
-					return j;
-				}
+		if (ItemUtil.getFoodAmount(mainHandInventory[0]) > 0) {
+			return getSizeInventory() - 2;
+		}
+		if (ItemUtil.getFoodAmount(offHandInventory[0]) > 0) {
+			return getSizeInventory() - 1;
+		}
+		for (int j = 0; j < getSizeInventory(); j++) {
+			ItemStack mi = getStackInSlot(j);
+			if (ItemUtil.getFoodAmount(mi) > 0) {
+				return j;
 			}
 		}
 		return -1;
@@ -489,7 +498,7 @@ public class InventoryLittleMaid extends InventoryPlayer {
 		if (pIndex >= getSizeInventory()) {
 			return;
 		}
-		prevItems[pIndex] = new ItemStack(Items.sugar);
+		prevItems[pIndex] = new ItemStack(Items.SUGAR);
 	}
 
 	public void resetChanged(int pIndex) {
@@ -500,7 +509,7 @@ public class InventoryLittleMaid extends InventoryPlayer {
 
 	public void clearChanged() {
 		// 強制リロード用、ダミーを登録して強制的に一周させる
-		ItemStack lis = new ItemStack(Items.sugar);
+		ItemStack lis = new ItemStack(Items.SUGAR);
 		for (int li = 0; li < prevItems.length; li++) {
 			prevItems[li] = lis;
 		}
@@ -518,19 +527,20 @@ public class InventoryLittleMaid extends InventoryPlayer {
 
 	@Override
 	public ItemStack getStackInSlot(int index) {
-		ItemStack pItemStack;
-		if (index >= handInventoryOffset + 1) {
-			pItemStack = offHandInventory[index - (handInventoryOffset + 1)];
-		} else if (index >= handInventoryOffset) {
-			pItemStack = mainHandInventory[index - handInventoryOffset];
-		} else if (index >= maxInventorySize) {
+		ItemStack pItemStack = null;
+		if (index == handInventoryOffset + 1) {
+			pItemStack = offHandInventory[0];
+		} else if (index == handInventoryOffset) {
+			pItemStack = mainHandInventory[0];
+		} else if (index >= maxInventorySize && index < handInventoryOffset) {
 			pItemStack = armorInventory[index-maxInventorySize];
-		} else {
+		} else if (index < maxInventorySize) {
 			pItemStack = mainInventory[index];
 		}
 
 		if (pItemStack != null && pItemStack.stackSize <= 0) {
 			setInventorySlotContents(index, null);
+			pItemStack = null;
 		}
 
 		return pItemStack;
@@ -540,7 +550,7 @@ public class InventoryLittleMaid extends InventoryPlayer {
 	public ItemStack decrStackSize(int index, int count) {
 		ItemStack target, returned = null;
 		if ((target = getStackInSlot(index)) != null) {
-			returned = getStackInSlot(index).splitStack(count);
+			returned = target.splitStack(count);
 			if (target.stackSize == 0) {
 				setInventorySlotContents(index, null);
 			}

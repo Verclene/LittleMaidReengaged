@@ -1,8 +1,10 @@
-package net.blacklab.lmr.entity;
+package net.blacklab.lmr.entity.littlemaid;
 
 import java.util.Collection;
+import java.util.List;
 
 import net.blacklab.lmr.LittleMaidReengaged;
+import net.blacklab.lmr.inventory.ContainerInventoryLittleMaid;
 import net.blacklab.lmr.util.EnumSound;
 import net.blacklab.lmr.util.helper.CommonHelper;
 import net.minecraft.entity.Entity;
@@ -13,13 +15,14 @@ import net.minecraft.entity.ai.attributes.IAttribute;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.inventory.Container;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.stats.StatBase;
-import net.minecraft.stats.StatisticsFile;
+import net.minecraft.stats.StatisticsManagerServer;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.SoundEvent;
@@ -55,21 +58,22 @@ public class EntityLittleMaidAvatarMP extends FakePlayer implements IEntityLittl
 
 		// 初期設定
 		avatar = par2EntityLittleMaid;
-		// TODO dataWatcher has been taken over.
-		dataWatcher = avatar.getDataManager();
+		// TODO dataManager has been taken over.
+		dataManager = avatar.getDataManager();
 
-//		this.dataWatcher.register(Statics.dataWatch_AbsorptionAmount, Float.valueOf(0.0F));
+//		this.dataManager.register(Statics.dataWatch_AbsorptionAmount, Float.valueOf(0.0F));
 
 		/*
 		 * TODO 要調整
 		 */
 		inventory = avatar.maidInventory;
 		inventory.player = this;
+		inventoryContainer = new ContainerInventoryLittleMaid(inventory, avatar);
 	}
 
 	// 実績参照
 	@Override
-	public StatisticsFile getStatFile() {
+	public StatisticsManagerServer getStatFile() {
 		// ご主人様がいれば、ご主人様の実績を返す。
 		if (this.avatar != null && this.avatar.getMaidMasterEntity() != null) {
 			// TODO Server only, so picking up from vanilla method. Is it correct?
@@ -147,6 +151,8 @@ public class EntityLittleMaidAvatarMP extends FakePlayer implements IEntityLittl
 
 	@Override
 	public void onUpdate() {
+		super.onUpdate();
+
 //		posX = avatar.posX;
 		EntityPlayer lep = avatar.getMaidMasterEntity();
 		setEntityId(avatar.getEntityId());
@@ -311,15 +317,19 @@ public class EntityLittleMaidAvatarMP extends FakePlayer implements IEntityLittl
 		isItemReload = isItemPreReload = false;
 		avatar.getSwingStatus(pIndex).stopUsingItem(getEntityServer());
 	}
-//	@Deprecated
+
 	@Override
 	public void stopActiveHand() {
-//		super.stopUsingItem();
-		isItemTrigger = false;
-		isItemReload = isItemPreReload = false;
 		stopUsingItem(avatar.getDominantArm());
 		avatar.stopActiveHand();
 		super.stopActiveHand();
+	}
+	
+	@Override
+	public void resetActiveHand() {
+		stopUsingItem(avatar.getDominantArm());
+		avatar.resetActiveHand();
+		super.resetActiveHand();
 	}
 
 	public void setItemInUse(int pIndex, ItemStack itemstack, int i) {
@@ -627,5 +637,13 @@ public class EntityLittleMaidAvatarMP extends FakePlayer implements IEntityLittl
 	@Override
 	public EntityLittleMaid getMaid() {
 		return avatar;
+	}
+
+	@Override
+	public void sendContainerToPlayer(Container containerIn) {
+	}
+
+	@Override
+	public void updateCraftingInventory(Container containerToSend, List<ItemStack> itemsList) {
 	}
 }

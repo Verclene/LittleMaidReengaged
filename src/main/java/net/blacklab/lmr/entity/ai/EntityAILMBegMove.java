@@ -1,6 +1,6 @@
 package net.blacklab.lmr.entity.ai;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.minecraft.entity.ai.EntityAIBase;
 import net.minecraft.entity.player.EntityPlayer;
 
@@ -9,14 +9,14 @@ public class EntityAILMBegMove extends EntityAIBase {
 	private EntityLittleMaid theMaid;
 	private EntityPlayer thePlayer;
 	private float moveSpeed;
-	
+
 	public EntityAILMBegMove(EntityLittleMaid pEntityLittleMaid, float pmoveSpeed) {
 		theMaid = pEntityLittleMaid;
 		moveSpeed = pmoveSpeed;
 
 		setMutexBits(1);
 	}
-	
+
 	@Override
 	public boolean shouldExecute() {
 		return theMaid.isLookSuger() && !theMaid.isMaidWait();
@@ -26,17 +26,17 @@ public class EntityAILMBegMove extends EntityAIBase {
 	public void startExecuting() {
 		thePlayer = theMaid.aiBeg.getPlayer();
 	}
-	
+
 	@Override
 	public void resetTask() {
 		thePlayer = null;
 	}
-	
+
 	@Override
 	public boolean continueExecuting() {
 		return shouldExecute();
 	}
-	
+
 	@Override
 	public void updateTask() {
 		// 不具合対応。

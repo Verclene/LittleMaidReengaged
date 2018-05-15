@@ -1,7 +1,7 @@
-package net.blacklab.lmr.entity.mode;
+package net.blacklab.lmr.entity.littlemaid.mode;
 
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.util.DevMode;
 import net.minecraft.entity.ai.EntityAITasks;
 import net.minecraft.entity.player.EntityPlayer;
@@ -11,7 +11,7 @@ import net.minecraft.item.ItemStack;
 
 public class EntityMode_Debug extends EntityMode_Basic {
 
-	public static final int mmode_Debug = 0x00f0;
+	public static final String mmode_Debug = "D:DEBUG";
 
 	public EntityMode_Debug(EntityLittleMaid pEntity) {
 		super(pEntity);
@@ -33,7 +33,7 @@ public class EntityMode_Debug extends EntityMode_Basic {
 		ltasks[0] = pDefaultMove;
 		ltasks[1] = pDefaultTargeting;
 
-		if(DevMode.DEVELOPMENT_DEBUG_MODE) owner.addMaidMode(ltasks, "Debug", mmode_Debug);
+		if(DevMode.DEVELOPMENT_DEBUG_MODE) owner.addMaidMode(mmode_Debug, ltasks);
 	}
 
 	@Override
@@ -42,8 +42,8 @@ public class EntityMode_Debug extends EntityMode_Basic {
 		ItemStack litemstackl0 = owner.maidInventory.getStackInSlot(17);
 		ItemStack litemstackl1 = owner.maidInventory.getStackInSlot(16);
 		if (litemstackl0 != null && litemstackl1 != null) {
-			if (litemstackl0.getItem() == LittleMaidReengaged.spawnEgg && litemstackl1.getItem() == Item.getItemFromBlock(Blocks.barrier)) {
-				owner.setMaidMode("Debug");
+			if (litemstackl0.getItem() == LittleMaidReengaged.spawnEgg && litemstackl1.getItem() == Item.getItemFromBlock(Blocks.BARRIER)) {
+				owner.setMaidMode(mmode_Debug);
 				return true;
 			}
 		}
@@ -51,7 +51,7 @@ public class EntityMode_Debug extends EntityMode_Basic {
 	}
 
 	@Override
-	public boolean setMode(int pMode) {
+	public boolean setMode(String pMode) {
 		if(!DevMode.DEVELOPMENT_DEBUG_MODE) return false;
 		switch (pMode) {
 		case mmode_Debug :
@@ -65,9 +65,9 @@ public class EntityMode_Debug extends EntityMode_Basic {
 	}
 
 	@Override
-	public void updateAITick(int pMode) {
+	public void updateAITick(String pMode) {
 		super.updateAITick(pMode);
-		if (pMode == mmode_Debug) {
+		if (pMode.equals(mmode_Debug)) {
 			owner.addMaidExperience(10f);
 			/*
 			try {

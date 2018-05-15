@@ -5,6 +5,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Random;
 
+import net.blacklab.lmr.network.LMRMessage;
+import net.minecraft.nbt.NBTTagCompound;
 import org.lwjgl.opengl.GL11;
 
 import net.blacklab.lmr.LittleMaidReengaged;
@@ -13,15 +15,15 @@ import net.blacklab.lmr.client.gui.GuiButtonBoostChange;
 import net.blacklab.lmr.client.gui.GuiButtonFreedomToggle;
 import net.blacklab.lmr.client.gui.GuiButtonNextPage;
 import net.blacklab.lmr.client.gui.GuiTextureSelect;
-import net.blacklab.lmr.entity.EntityLittleMaid;
 import net.blacklab.lmr.entity.experience.ExperienceUtil;
-import net.blacklab.lmr.entity.mode.EntityMode_Basic;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.inventory.ContainerInventoryLittleMaid;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.EntityPlayer;
@@ -32,7 +34,6 @@ import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.translation.I18n;
 
 public class GuiMaidInventory extends GuiContainer {
 	// Field
@@ -50,7 +51,7 @@ public class GuiMaidInventory extends GuiContainer {
 	public GuiButtonBoostChange boostMinus;
 	public GuiButtonBoostChange boostPlus;
 	public boolean isChangeTexture;
-	
+
 	private int topTicks = 0;
 
 	private static class RenderInfoPart {
@@ -132,7 +133,7 @@ public class GuiMaidInventory extends GuiContainer {
 
 		entitylittlemaid = elmaid;
 		// entitylittlemaid.setOpenInventory(true);
-		
+
 		topTicks = entitylittlemaid.ticksExisted;
 	}
 
@@ -160,16 +161,16 @@ public class GuiMaidInventory extends GuiContainer {
 
 	@Override
 	protected void drawGuiContainerForegroundLayer(int par1, int par2) {
-		String mInventoryString = I18n.translateToLocal(maidInventory.getName());
+		String mInventoryString = I18n.format(maidInventory.getName());
 		mc.fontRendererObj.drawString(mInventoryString, 168 - mc.fontRendererObj.getStringWidth(mInventoryString), 64, 0x404040);
-		mc.fontRendererObj.drawString(I18n.translateToLocal(
-				playerInventory.getName()), 8, 114, 0x404040);
+		mc.fontRendererObj.drawString(I18n.format(playerInventory.getName()), 8, 114, 0x404040);
+
 		//fontRenderer.drawString(StatCollector.translateToLocal("littleMaidMob.text.Health"), 86, 8, 0x404040);
 		//fontRenderer.drawString(StatCollector.translateToLocal("littleMaidMob.text.AP"), 86, 32, 0x404040);
 
 		if (RenderInfoPart.getRenderingPart() == 2) {
-			mc.fontRendererObj.drawString(I18n.translateToLocal(
-					"littleMaidMob.mode.".concat(entitylittlemaid.getMaidModeString())), 7, 64, 0x404040);
+			mc.fontRendererObj.drawString(I18n.format(
+					"littleMaidMob.mode.".concat(entitylittlemaid.getMaidModeStringForDisplay())), 7, 64, 0x404040);
 		}
 
 //	      GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
@@ -378,7 +379,7 @@ public class GuiMaidInventory extends GuiContainer {
 			var3 = false;
 		}
 
-		Minecraft.getMinecraft().getTextureManager().bindTexture(icons);
+		Minecraft.getMinecraft().getTextureManager().bindTexture(ICONS);
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
 		int orgnHealth = MathHelper.ceiling_float_int(entitylittlemaid.getHealth());
@@ -485,7 +486,7 @@ public class GuiMaidInventory extends GuiContainer {
 
 		// Air
 		ldrawy = guiTop + 46;
-		if (entitylittlemaid.isInsideOfMaterial(Material.water)) {
+		if (entitylittlemaid.isInsideOfMaterial(Material.WATER)) {
 			int var23 = entitylittlemaid.getAir();
 			int var35 = MathHelper.ceiling_double_int((var23 - 2) * 10.0D / 300.0D);
 			int var25 = MathHelper.ceiling_double_int(var23 * 10.0D / 300.0D) - var35;
@@ -524,7 +525,7 @@ public class GuiMaidInventory extends GuiContainer {
 		int ii = i - guiLeft;
 		int jj = j - guiTop;
 
-		if (ii > 7 && ii < 96 && jj > 7 && jj < 60) {
+		if (entitylittlemaid.canChangeModel() && ii > 7 && ii < 96 && jj > 7 && jj < 60) {
 			// ボタンの表示
 			txbutton[0].visible = true;
 			txbutton[1].visible = true;
@@ -576,7 +577,7 @@ public class GuiMaidInventory extends GuiContainer {
 			GlStateManager.disableLighting();
 			GlStateManager.disableDepth();
 			GlStateManager.colorMask(true, true, true, false);
-			String str = I18n.translateToLocal("littleMaidMob.gui.text.expboost");
+			String str = I18n.format("littleMaidMob.gui.text.expboost");
 			int width = fontRendererObj.getStringWidth(str);
 			int centerx = guiLeft + 48 + xSize/2;
 			drawGradientRect(centerx - width/2 - 4, guiTop, centerx + width/2 + 4, guiTop + fontRendererObj.FONT_HEIGHT, 0xc0202020, 0xc0202020);
@@ -651,7 +652,7 @@ public class GuiMaidInventory extends GuiContainer {
 				ldye = 0xffff;
 			} else {
 				for (ItemStack lis : mc.thePlayer.inventory.mainInventory) {
-					if (lis != null && lis.getItem() == Items.dye) {
+					if (lis != null && lis.getItem() == Items.DYE) {
 						ldye |= (1 << (15 - lis.getItemDamage()));
 					}
 				}
@@ -679,6 +680,12 @@ public class GuiMaidInventory extends GuiContainer {
 			frdmbutton.toggle=!frdmbutton.toggle;
 			entitylittlemaid.setFreedom(frdmbutton.toggle);
 			entitylittlemaid.handleStatusUpdate((byte) (frdmbutton.toggle?12:13));
+
+			// Synchronize
+			NBTTagCompound tagCompound = new NBTTagCompound();
+			tagCompound.setBoolean("Freedom", frdmbutton.toggle);
+			entitylittlemaid.syncNet(LMRMessage.EnumPacketMode.SERVER_CHAMGE_FREEDOM, tagCompound);
+
 			break;
 		case 320:
 			booster-=2;
@@ -727,10 +734,10 @@ public class GuiMaidInventory extends GuiContainer {
 				drawTexturedModalRect(lx + 6, ly + 7, 0 + (i1 % 8) * 18,
 						ySizebk + 32 + (i1 / 8) * 18, 18, 18);
 			}
-			String ls = I18n.translateToLocal(potion.getName());
+			String ls = I18n.format(potion.getName());
 			if (potioneffect.getAmplifier() > 0) {
 				ls = (new StringBuilder()).append(ls).append(" ")
-						.append(I18n.translateToLocal((new StringBuilder())
+						.append(I18n.format((new StringBuilder())
 								.append("potion.potency.")
 								.append(potioneffect.getAmplifier())
 								.toString())).toString();

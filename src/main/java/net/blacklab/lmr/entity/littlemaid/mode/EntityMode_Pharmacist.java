@@ -1,8 +1,8 @@
-package net.blacklab.lmr.entity.mode;
+package net.blacklab.lmr.entity.littlemaid.mode;
 
 import net.blacklab.lmr.LittleMaidReengaged;
 import net.blacklab.lmr.achievements.AchievementsLMRE;
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.util.EnumSound;
 import net.blacklab.lmr.util.SwingStatus;
 import net.blacklab.lmr.util.helper.CommonHelper;
@@ -20,7 +20,7 @@ import net.minecraftforge.common.brewing.BrewingRecipeRegistry;
 
 public class EntityMode_Pharmacist extends EntityModeBlockBase {
 
-	public static final int mmode_Pharmacist = 0x0022;
+	public static final String mmode_Pharmacist = "Pharmacist";
 
 	protected int inventryPos;
 
@@ -51,15 +51,15 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 		ltasks[0] = pDefaultMove;
 		ltasks[1] = pDefaultTargeting;
 
-		owner.addMaidMode(ltasks, "Pharmacist", mmode_Pharmacist);
+		owner.addMaidMode(mmode_Pharmacist, ltasks);
 	}
 
 	@Override
 	public boolean changeMode(EntityPlayer pentityplayer) {
 		ItemStack litemstack = owner.getHandSlotForModeChange();
 		if (litemstack != null) {
-			if (isTriggerItem(mmode_Pharmacist, litemstack) && owner.maidInventory.getInventorySlotContainItem(Items.blaze_powder) > 0) {
-				owner.setMaidMode("Pharmacist");
+			if (isTriggerItem(mmode_Pharmacist, litemstack) && owner.maidInventory.getInventorySlotContainItem(Items.BLAZE_POWDER) > 0) {
+				owner.setMaidMode(mmode_Pharmacist);
 				if (pentityplayer != null) {
 					pentityplayer.addStat(AchievementsLMRE.ac_Pharmacist);
 				}
@@ -70,11 +70,11 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean setMode(int pMode) {
+	public boolean setMode(String pMode) {
 		switch (pMode) {
 		case mmode_Pharmacist :
 			owner.setBloodsuck(false);
-			owner.aiJumpTo.setEnable(false);
+//			owner.aiJumpTo.setEnable(false);
 			owner.aiFollow.setEnable(false);
 			owner.aiAttack.setEnable(false);
 			owner.aiShooting.setEnable(false);
@@ -86,7 +86,7 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 	}
 
 	@Override
-	public int getNextEquipItem(int pMode) {
+	public int getNextEquipItem(String pMode) {
 		int li;
 		if ((li = super.getNextEquipItem(pMode)) >= 0) {
 			return li;
@@ -116,7 +116,7 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 	}
 
 	@Override
-	protected boolean isTriggerItem(int pMode, ItemStack par1ItemStack) {
+	protected boolean isTriggerItem(String pMode, ItemStack par1ItemStack) {
 		if (par1ItemStack == null) {
 			return false;
 		}
@@ -142,7 +142,7 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean shouldBlock(int pMode) {
+	public boolean shouldBlock(String pMode) {
 		// 実行中判定
 		return owner.maidTileEntity instanceof TileEntityBrewingStand &&
 				(((TileEntityBrewingStand)owner.maidTileEntity).getField(0) > 0 ||
@@ -150,7 +150,7 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean checkBlock(int pMode, int px, int py, int pz) {
+	public boolean checkBlock(String pMode, int px, int py, int pz) {
 		if (owner.getCurrentEquippedItem() == null) {
 			return false;
 		}
@@ -174,7 +174,7 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean executeBlock(int pMode, int px, int py, int pz) {
+	public boolean executeBlock(String pMode, int px, int py, int pz) {
 		TileEntityBrewingStand ltile = (TileEntityBrewingStand)owner.maidTileEntity;
 		if (owner.worldObj.getTileEntity(new BlockPos(px, py, pz)) != ltile) {
 			return false;
@@ -191,7 +191,7 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 			owner.setWorking(true);
 		}
 
-		int blaze_position = owner.maidInventory.getInventorySlotContainItem(Items.blaze_powder);
+		int blaze_position = owner.maidInventory.getInventorySlotContainItem(Items.BLAZE_POWDER);
 		if (lswing.canAttack()) {
 			// Get fuel value
 			// Blaze Power slot in stand
@@ -199,7 +199,7 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 			if (ltile.getField(1) <= 0 && blazeStackB == null) {
 				if (blaze_position >= 0) {
 					ItemStack blazeStackM = owner.maidInventory.getStackInSlot(blaze_position);
-					ltile.setInventorySlotContents(4, new ItemStack(Items.blaze_powder));
+					ltile.setInventorySlotContents(4, new ItemStack(Items.BLAZE_POWDER));
 					blazeStackM.stackSize--;
 					if (blazeStackM.stackSize <= 0) {
 						blazeStackM = null;
@@ -317,12 +317,12 @@ public class EntityMode_Pharmacist extends EntityModeBlockBase {
 	}
 
 	@Override
-	public void startBlock(int pMode) {
+	public void startBlock(String pMode) {
 		inventryPos = 0;
 	}
 
 	@Override
-	public void resetBlock(int pMode) {
+	public void resetBlock(String pMode) {
 		owner.setSneaking(false);
 	}
 

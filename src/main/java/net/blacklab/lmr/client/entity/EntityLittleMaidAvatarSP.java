@@ -3,8 +3,8 @@ package net.blacklab.lmr.client.entity;
 import java.util.Collection;
 
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.blacklab.lmr.entity.EntityLittleMaid;
-import net.blacklab.lmr.entity.IEntityLittleMaidAvatar;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.IEntityLittleMaidAvatar;
 import net.blacklab.lmr.util.EnumSound;
 import net.blacklab.lmr.util.helper.CommonHelper;
 import net.minecraft.entity.Entity;
@@ -50,9 +50,9 @@ public class EntityLittleMaidAvatarSP extends EntityPlayer implements IEntityLit
 
 		// 初期設定
 		avatar = par2EntityLittleMaid;
-		dataWatcher = avatar.getDataManager();
+		dataManager = avatar.getDataManager();
 
-//		this.dataWatcher.register(Statics.dataWatch_AbsorptionAmount, Float.valueOf(0.0F));
+//		this.dataManager.register(Statics.dataWatch_AbsorptionAmount, Float.valueOf(0.0F));
 
 		// TODO Client限定ゴマカシ
 		inventory = new InventoryPlayer(this);

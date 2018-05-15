@@ -1,9 +1,9 @@
-package net.blacklab.lmr.entity.mode;
+package net.blacklab.lmr.entity.littlemaid.mode;
 
 import java.util.List;
 
 import net.blacklab.lmr.client.renderer.entity.RenderLittleMaid;
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.inventory.InventoryLittleMaid;
 import net.blacklab.lmr.util.helper.MaidHelper;
 import net.minecraft.entity.Entity;
@@ -44,13 +44,17 @@ public abstract class EntityModeBase {
 	public abstract int priority();
 
 	/**
-	 * 起動時の初期化。
+	 * Initialize on Load.<br/>
+	 * <strong>NOTE:</strong>init() method MUST <strong>NOT</strong> access to non-static members.
+	 * All operations to instance in this method will be discarded.
+	 * If you want to apply any changes to maids, use initEntity() method instead.
 	 */
 	public void init() {
 	}
 
 	/**
-	 * Entity初期化時の実行部
+	 * Called when Initialize Entity.
+	 * This method is called from constructor of EntityLittleMaid.
 	 */
 	public void initEntity() {
 	}
@@ -81,14 +85,14 @@ public abstract class EntityModeBase {
 	 * サーバー側のみの毎時処理。
 	 * AI処理の後の方に呼ばれる。
 	 */
-	public void updateAITick(int pMode) {
+	public void updateAITick(String pMode) {
 	}
 
 	/**
 	 * 毎時処理。
 	 * 他の処理の前に呼ばれる
 	 */
-	public void onUpdate(int pMode) {
+	public void onUpdate(String pMode) {
 	}
 
 	/**
@@ -118,7 +122,7 @@ public abstract class EntityModeBase {
 	/**
 	 * Called post changing mode.
 	 */
-	public boolean setMode(int pMode) {
+	public boolean setMode(String maidMode) {
 		return false;
 	}
 
@@ -126,7 +130,7 @@ public abstract class EntityModeBase {
 	 * 使用アイテムの選択。
 	 * 戻り値はスロット番号
 	 */
-	public int getNextEquipItem(int pMode) {
+	public int getNextEquipItem(String pMode) {
 		if (isTriggerItem(pMode, owner.getHandSlotForModeChange())) {
 			return InventoryLittleMaid.handInventoryOffset;
 		}
@@ -137,7 +141,7 @@ public abstract class EntityModeBase {
 	 * Returns whether the item is used as main item of this class.
 	 * Before using par1ItemStack, NULL CHECKING IS REQUIRED!
 	 */
-	protected boolean isTriggerItem(int pMode, ItemStack par1ItemStack) {
+	protected boolean isTriggerItem(String pMode, ItemStack par1ItemStack) {
 		return false;
 	}
 
@@ -166,7 +170,7 @@ public abstract class EntityModeBase {
 	 * 攻撃判定処理。
 	 * 特殊な攻撃動作はここで実装。
 	 */
-	public boolean attackEntityAsMob(int pMode, Entity pEntity) {
+	public boolean attackEntityAsMob(String pMode, Entity pEntity) {
 		// 特殊攻撃の設定なし
 		return false;
 	}
@@ -182,7 +186,7 @@ public abstract class EntityModeBase {
 	/**
 	 * isSearchBlock=falseのときに判定される。
 	 */
-	public boolean shouldBlock(int pMode) {
+	public boolean shouldBlock(String pMode) {
 		return false;
 	}
 
@@ -190,14 +194,14 @@ public abstract class EntityModeBase {
 	 * 探し求めたブロックであるか。
 	 * trueを返すと検索終了。
 	 */
-	public boolean checkBlock(int pMode, int px, int py, int pz) {
+	public boolean checkBlock(String pMode, int px, int py, int pz) {
 		return MaidHelper.isTargetReachable(owner, new Vec3d(px, py, pz), 0);
 	}
 
 	/**
 	 * 検索範囲に索敵対象がなかった。
 	 */
-	public boolean overlooksBlock(int pMode) {
+	public boolean overlooksBlock(String pMode) {
 		return false;
 	}
 //	@Deprecated
@@ -215,10 +219,10 @@ public abstract class EntityModeBase {
 	/**
 	 * 有効射程距離を超えた時の処理
 	 */
-	public boolean outrangeBlock(int pMode, int pX, int pY, int pZ) {
+	public boolean outrangeBlock(String pMode, int pX, int pY, int pZ) {
 		return owner.getNavigator().tryMoveToXYZ(pX, pY, pZ, 1.0F);
 	}
-	public boolean outrangeBlock(int pMode) {
+	public boolean outrangeBlock(String pMode) {
 		return outrangeBlock(pMode, owner.maidTile[0], owner.maidTile[1], owner.maidTile[2]);
 	}
 
@@ -226,23 +230,23 @@ public abstract class EntityModeBase {
 	 * 射程距離に入ったら実行される。
 	 * 戻り値がtrueの時は終了せずに動作継続
 	 */
-	public boolean executeBlock(int pMode, int px, int py, int pz) {
+	public boolean executeBlock(String pMode, int px, int py, int pz) {
 		return false;
 	}
-	public boolean executeBlock(int pMode) {
+	public boolean executeBlock(String pMode) {
 		return executeBlock(pMode, owner.maidTile[0], owner.maidTile[1], owner.maidTile[2]);
 	}
 
 	/**
 	 * AI実行時に呼ばれる。
 	 */
-	public void startBlock(int pMode) {
+	public void startBlock(String pMode) {
 	}
 
 	/**
 	 * AI終了時に呼ばれる。
 	 */
-	public void resetBlock(int pMode) {
+	public void resetBlock(String pMode) {
 	}
 
 	/**
@@ -267,7 +271,7 @@ public abstract class EntityModeBase {
 	/**
 	 * 独自索敵処理
 	 */
-	public boolean checkEntity(int pMode, Entity pEntity) {
+	public boolean checkEntity(String pMode, Entity pEntity) {
 		return false;
 	}
 
@@ -291,7 +295,7 @@ public abstract class EntityModeBase {
 	 * 被ダメ時の処理２。
 	 * trueを返すと処理を乗っ取る。
 	 */
-	public boolean damageEntity(int pMode, DamageSource par1DamageSource, float par2) {
+	public boolean damageEntity(String pMode, DamageSource par1DamageSource, float par2) {
 		return false;
 	}
 
@@ -313,21 +317,29 @@ public abstract class EntityModeBase {
 	 * Returns the squared distance from master to start following.
 	 */
 	public double getDistanceSqToStartFollow() {
-		return 36d;
+		return 4.5 * 4.5;
 	}
 
 	/**
 	 * Returns the squared distance from master to teleport.
 	 */
 	public double getLimitRangeSqOnFollow() {
-		return 144d;
+		return 12 * 12;
 	}
 
 	/**
 	 * Returns the squared radius of the area on which freedom maids can act.
 	 */
 	public double getFreedomTrackingRangeSq() {
-		return 400d;
+		return 20 * 20;
+	}
+
+	/**
+	 * Returns the radius of the range to search targets.
+	 * @return The radius of the range to search targets. If 0 or less, default searching range(FOLLOW_RANGE of EntityAttribute) will be used.
+	 */
+	public double getDistanceToSearchTargets() {
+		return 0d;
 	}
 
 	/**
@@ -337,6 +349,23 @@ public abstract class EntityModeBase {
 	 */
 	public boolean isChangeTartget(Entity pTarget) {
 		return !owner.isBloodsuck();
+	}
+
+	public final float getSugarSpeed() {
+		float lSpeed = getSugarConsumingMultiply();
+		if (lSpeed < 1) {
+			throw new IllegalArgumentException("Return of getSugarConsumingMultiply() must not be under 1.0");
+		}
+		return lSpeed;
+	}
+
+	/**
+	 * ジョブによりつまみ食い量を調整する.
+	 * 1より低い値を指定することはできず, 1より低い値が返された場合はgetSugarSpeed()からIllegalrgumentExceptionがスローされる.
+	 * @return
+	 */
+	public float getSugarConsumingMultiply() {
+		return 1f;
 	}
 
 }

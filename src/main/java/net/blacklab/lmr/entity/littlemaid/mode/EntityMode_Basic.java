@@ -1,4 +1,4 @@
-package net.blacklab.lmr.entity.mode;
+package net.blacklab.lmr.entity.littlemaid.mode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,10 +6,9 @@ import java.util.List;
 import net.blacklab.lib.vevent.VEventBus;
 import net.blacklab.lmr.LittleMaidReengaged;
 import net.blacklab.lmr.api.event.EventLMRE;
-import net.blacklab.lmr.api.mode.UtilModeFarmer;
-import net.blacklab.lmr.entity.EntityLittleMaid;
 import net.blacklab.lmr.entity.ai.EntityAILMHurtByTarget;
 import net.blacklab.lmr.entity.ai.EntityAILMWildWatchClosest;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.inventory.InventoryLittleMaid;
 import net.blacklab.lmr.util.EnumSound;
 import net.blacklab.lmr.util.helper.CommonHelper;
@@ -24,6 +23,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemAppleGold;
 import net.minecraft.item.ItemBucketMilk;
+import net.minecraft.item.ItemHoe;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityChest;
@@ -31,9 +31,9 @@ import net.minecraft.util.math.BlockPos;
 
 public class EntityMode_Basic extends EntityModeBlockBase {
 
-	public static final int mmode_Wild			= 0x0000;
-	public static final int mmode_Escorter		= 0x0001;
-	public static final int mmode_FarmPorter	= 0x0024;
+	public static final String mmode_Wild			= "Wild";
+	public static final String mmode_Escort			= "Escort";
+	public static final String mmode_FarmPorter		= "FarmPort";
 
 	private IInventory myInventory;
 	private IInventory myChest;
@@ -57,17 +57,6 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 
 	@Override
 	public void init() {
-		/* langファイルに移動
-		ModLoader.addLocalization("littleMaidMob.mode.Strike", "Strike");
-		ModLoader.addLocalization("littleMaidMob.mode.Wait", "Wait");
-		ModLoader.addLocalization("littleMaidMob.mode.Wild", "Wild");
-		ModLoader.addLocalization("littleMaidMob.mode.Wild", "ja_JP", "野生種");
-		ModLoader.addLocalization("littleMaidMob.mode.Escorter", "Escorter");
-		ModLoader.addLocalization("littleMaidMob.mode.Escorter", "ja_JP", "従者");
-		ModLoader.addLocalization("littleMaidMob.mode.F-Escorter", "Freedom");
-		ModLoader.addLocalization("littleMaidMob.mode.D-Escorter", "D-Escorter");
-		ModLoader.addLocalization("littleMaidMob.mode.T-Escorter", "Tracer");
-		*/
 	}
 
 	@Override
@@ -97,38 +86,44 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 
 		ltasks[1].addTask(1, new EntityAILMHurtByTarget(owner, false));
 
-		owner.addMaidMode(ltasks, "Wild", mmode_Wild);
+		owner.addMaidMode(mmode_Wild, ltasks);
 
 		// Escorter:0x0001
 		ltasks = new EntityAITasks[2];
 		ltasks[0] = pDefaultMove;
 		ltasks[1] = pDefaultTargeting;
-		owner.addMaidMode(ltasks, "Escorter", mmode_Escorter);
-		owner.addMaidMode(ltasks, "FarmPorter", mmode_FarmPorter);
+		owner.addMaidMode(mmode_Escort, ltasks);
+		owner.addMaidMode(mmode_FarmPorter, ltasks);
 
 	}
 
 	@Override
 	public boolean changeMode(EntityPlayer pentityplayer) {
-		ItemStack litemstack = owner.getHandSlotForModeChange();
+		ItemStack litemstack = owner.getCurrentEquippedItem();
 		if (litemstack != null) {
-			if (UtilModeFarmer.isHoe(owner, litemstack)) {
-				owner.setMaidMode("FarmPorter");
+			if (owner.getModeTrigger().isTriggerable(EntityMode_Farmer.mtrigger_Hoe, litemstack, ItemHoe.class)) {
+				owner.setMaidMode(mmode_FarmPorter);
 				return true;
 			}
 		}
-		owner.setMaidMode("Escorter");
+		owner.setMaidMode(mmode_Escort);
 		return true;
 	}
 
 	@Override
-	public boolean setMode(int pMode) {
+	public boolean setMode(String pMode) {
 		switch (pMode) {
 		case mmode_Wild :
+			if (owner.isContractEX()) {
+				return setMode(mmode_Escort);
+			}
 			owner.setFreedom(true);
 //			owner.aiWander.setEnable(true);
 			return true;
-		case mmode_Escorter :
+		case "Escorter":
+			owner.setMaidMode(mmode_Escort);
+			break;
+		case mmode_Escort :
 			owner.aiAvoidPlayer.setEnable(false);
 			for (int li = 0; li < owner.mstatSwingStatus.length; li++) {
 				owner.setEquipItem(li, -1);
@@ -142,7 +137,7 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 	}
 
 	@Override
-	public int getNextEquipItem(int pMode) {
+	public int getNextEquipItem(String pMode) {
 		// Use mainhand slot prior
 		return -1;
 	}
@@ -154,7 +149,8 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 
 	@Override
 	public boolean isSearchBlock() {
-		if ((owner.getMaidModeInt() == mmode_Escorter||owner.getMaidModeInt()==mmode_FarmPorter)
+		if ((owner.getMaidModeString().equals(mmode_Escort) ||
+				owner.getMaidModeString().equals(mmode_FarmPorter))
 				&& owner.isFreedom() && !owner.isMaidWait() &&
 				owner.maidInventory.getFirstEmptyStack() == -1) {
 			// 対象をまだ見つけていないときは検索を行う。
@@ -167,12 +163,12 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean shouldBlock(int pMode) {
+	public boolean shouldBlock(String pMode) {
 		return myInventory instanceof TileEntity;
 	}
 
 	@Override
-	public boolean checkBlock(int pMode, int px, int py, int pz) {
+	public boolean checkBlock(String pMode, int px, int py, int pz) {
 		TileEntity ltile = owner.worldObj.getTileEntity(new BlockPos(px, py, pz));
 		if (!(ltile instanceof IInventory)) {
 			return false;
@@ -199,8 +195,7 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public boolean overlooksBlock(int pMode) {
+	public boolean overlooksBlock(String pMode) {
 		// チェストカートの検索
 		List<TileEntity> list = owner.worldObj.loadedTileEntityList;
 		for (TileEntity lentity : list) {
@@ -232,11 +227,7 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 	}
 
 	@Override
-	public void startBlock(int pMode) {
-	}
-
-	@Override
-	public void resetBlock(int pMode) {
+	public void resetBlock(String pMode) {
 		clearMy();
 //		fusedTiles.clear();
 	}
@@ -252,7 +243,7 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean executeBlock(int pMode, int px, int py, int pz) {
+	public boolean executeBlock(String pMode, int px, int py, int pz) {
 //		isMaidChaseWait = true;
 		if (myInventory instanceof TileEntityChest) {
 			// ブロック系のチェスト
@@ -291,7 +282,7 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean outrangeBlock(int pMode, int pX, int pY, int pZ) {
+	public boolean outrangeBlock(String pMode, int pX, int pY, int pZ) {
 		// チェストまでのパスを作る
 		boolean lf = false;
 		if (!owner.isMaidWaitEx()) {
@@ -364,8 +355,8 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 				maidSearchCount++;
 			}
 
-			EventLMRE.ItemPutChestEvent event = new EventLMRE.ItemPutChestEvent(owner,myChest,is,maidSearchCount);
 			if (is != null){
+				EventLMRE.ItemPutChestEvent event = new EventLMRE.ItemPutChestEvent(owner,myChest,is,maidSearchCount);
 				if(!VEventBus.instance.post(event)){
 //					mod_littleMaidMob.Debug("getchest2.");
 					boolean f = false;
@@ -424,7 +415,7 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 	}
 
 	@Override
-	public boolean attackEntityAsMob(int pMode, Entity pEntity) {
+	public boolean attackEntityAsMob(String pMode, Entity pEntity) {
 		if (pEntity == myInventory) {
 			// チェスト付カートとか
 			Entity lentity = (Entity)myInventory;
@@ -512,6 +503,16 @@ public class EntityMode_Basic extends EntityModeBlockBase {
 			}
 		}
 		return false;
+	}
+	
+	@Override
+	public void updateAITick(String pMode) {
+		if(pMode.equals(mmode_FarmPorter) &&
+				owner.maidInventory.getFirstEmptyStack()>-1 &&
+				!owner.getWorkingCount().isEnable()){
+			owner.setMaidMode(EntityMode_Farmer.mmode_Farmer);
+		}
+		super.updateAITick(pMode);
 	}
 
 }

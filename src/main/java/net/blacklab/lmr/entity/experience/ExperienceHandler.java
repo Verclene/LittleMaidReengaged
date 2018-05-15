@@ -3,25 +3,23 @@ package net.blacklab.lmr.entity.experience;
 import java.util.UUID;
 
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.blacklab.lmr.entity.EntityLittleMaid;
-import net.blacklab.lmr.entity.mode.EntityMode_Basic;
-import net.blacklab.lmr.entity.mode.EntityMode_DeathWait;
-import net.blacklab.lmr.network.EnumPacketMode;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.mode.EntityMode_Basic;
+import net.blacklab.lmr.entity.littlemaid.mode.EntityMode_DeathWait;
+import net.blacklab.lmr.network.LMRMessage;
+import net.blacklab.lmr.util.helper.CommonHelper;
 import net.blacklab.lmr.util.helper.ItemHelper;
-import net.blacklab.lmr.util.helper.MaidHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntityDamageSource;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.util.text.TextComponentTranslation;
 
 public class ExperienceHandler {
 
@@ -43,22 +41,6 @@ public class ExperienceHandler {
 	}
 
 	public void onLevelUp(int level) {
-		/*
-		 * 報酬付与・固定アイテム
-		 */
-		if (level%20 == 0) {
-			MaidHelper.giveItem(new ItemStack(Items.name_tag), theMaid);
-		}
-		if (level%75 == 0) {
-			MaidHelper.giveItem(new ItemStack(Items.emerald, MathHelper.ceiling_float_int(level/150f)), theMaid);
-		}
-		if (level%150 == 0) {
-			MaidHelper.giveItem(new ItemStack(Items.diamond, level/150), theMaid);
-		}
-		if (level == 200 || level == 300) {
-			MaidHelper.giveItem(new ItemStack(Items.nether_star, 1), theMaid);
-		}
-
 		/*
 		 * 最大HP上昇
 		 */
@@ -124,13 +106,12 @@ public class ExperienceHandler {
 				theMaid.playSound("mob.ghast.death");
 				theMaid.playSound("dig.glass");
 				if (theMaid.getMaidMasterEntity() != null) {
-					theMaid.getMaidMasterEntity().addChatComponentMessage(new TextComponentString(
-							theMaid.sprintfDeadCause(I18n.translateToLocal("littleMaidMob.chat.text.timedeath"), deadCause)));
+					theMaid.getMaidMasterEntity().addChatComponentMessage(new TextComponentTranslation("littleMaidMob.chat.text.timedeath", CommonHelper.getDeadSource(deadCause)));
 				}
 			}
 
 			// 行動不能
-			if ((--pauseCount > 0 || deathCount > 0) && (theMaid.isMaidWait() || theMaid.getMaidModeInt() != EntityMode_DeathWait.mmode_DeathWait)) {
+			if ((--pauseCount > 0 || deathCount > 0) && (theMaid.isMaidWait() || !theMaid.getMaidModeString().equals(EntityMode_DeathWait.mmode_DeathWait))) {
 				theMaid.setMaidWait(false);
 				theMaid.setMaidMode(EntityMode_DeathWait.mmode_DeathWait);
 			}
@@ -165,7 +146,7 @@ public class ExperienceHandler {
 						}
 					}
 					theMaid.setMaidWait(false);
-					theMaid.setMaidMode(EntityMode_Basic.mmode_Escorter);
+					theMaid.setMaidMode(EntityMode_Basic.mmode_Escort);
 					isWaitRevive = false;
 				}
 			}
@@ -176,7 +157,7 @@ public class ExperienceHandler {
 		if (isWaitRevive && deathCount > 0) {
 			return true;
 		} else if (!theMaid.worldObj.isRemote && theMaid.getHealth() <= 0f) {
-			theMaid.syncNet(EnumPacketMode.CLIENT_ONDEATH, new byte[]{});
+			theMaid.syncNet(LMRMessage.EnumPacketMode.CLIENT_ONDEATH, null);
 		}
 		return false;
 	}

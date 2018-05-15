@@ -4,7 +4,7 @@ import java.util.Iterator;
 
 import org.lwjgl.opengl.GL11;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.entity.maidmodel.IModelCaps;
 import net.blacklab.lmr.entity.maidmodel.ModelBaseDuo;
 import net.blacklab.lmr.inventory.InventoryLittleMaid;
@@ -74,7 +74,7 @@ public class RenderLittleMaid extends RenderModelMulti {
 			lmm = (EntityLittleMaid) par1EntityLiving;
 
 			for (int i=0; i<4; i++) {
-				if (lmm.maidInventory.getStackInSlot(InventoryLittleMaid.maxInventorySize+i) != null) {
+				if (lmm.maidInventory.armorItemInSlot(i) != null) {
 					render(par1EntityLiving, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch, i);
 				}
 			}

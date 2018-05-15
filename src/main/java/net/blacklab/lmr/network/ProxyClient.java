@@ -1,31 +1,30 @@
 package net.blacklab.lmr.network;
 
-import java.util.Arrays;
-
 import net.blacklab.lmr.LittleMaidReengaged;
 import net.blacklab.lmr.client.entity.EntityLittleMaidForTexSelect;
 import net.blacklab.lmr.client.gui.GuiIFF;
 import net.blacklab.lmr.client.gui.inventory.GuiMaidInventory;
 import net.blacklab.lmr.client.sound.SoundLoader;
-import net.blacklab.lmr.entity.EntityLittleMaid;
-import net.blacklab.lmr.entity.EntityMarkerDummy;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityMarkerDummy;
 import net.blacklab.lmr.entity.renderfactory.RenderFactoryLittleMaid;
 import net.blacklab.lmr.entity.renderfactory.RenderFactoryMarkerDummy;
 import net.blacklab.lmr.entity.renderfactory.RenderFactoryModelSelect;
 import net.blacklab.lmr.util.EnumSound;
 import net.blacklab.lmr.util.IFF;
 import net.blacklab.lmr.util.helper.CommonHelper;
-import net.blacklab.lmr.util.helper.NetworkHelper;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.particle.EntityPickupFX;
+import net.minecraft.client.particle.ParticleItemPickup;
 import net.minecraft.client.renderer.block.model.ModelBakery;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.client.model.ModelLoader;
-import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 
 /**
@@ -78,7 +77,7 @@ public class ProxyClient extends ProxyCommon
 		// アイテム回収のエフェクト
 		// TODO:こっちを使うか？
 //		mc.effectRenderer.addEffect(new EntityPickupFX(mc.theWorld, entity, avatar, -0.5F));
-		CommonHelper.mc.effectRenderer.addEffect(new EntityPickupFX(CommonHelper.mc.theWorld, entity, pAvatar, 0.1F));
+		CommonHelper.mc.effectRenderer.addEffect(new ParticleItemPickup(CommonHelper.mc.theWorld, entity, pAvatar, 0.1F));
 	}
 
 	// TODO いらん？
@@ -141,7 +140,7 @@ public class ProxyClient extends ProxyCommon
 //		}
 */
 	}
-	
+
 	@Override
 	public Object getClientGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
 		Object o = null;
@@ -160,49 +159,57 @@ public class ProxyClient extends ProxyCommon
 		}
 		return o;
 	}
-	
+
 	@Override
 	public void onClientCustomPayLoad(LMRMessage pPayload) {
-		EnumPacketMode lmode = EnumPacketMode.getEnumPacketMode(pPayload.data[0]);
+		LMRMessage.EnumPacketMode lmode = pPayload.getMode();
 		if (lmode == null) return;
+
 		LittleMaidReengaged.Debug("MODE: %s", lmode.toString());
-		EntityLittleMaid lemaid = null;
+
+		Entity lemaid = null;
 		if (lmode.withEntity) {
-			lemaid = LMRNetwork.getLittleMaid(pPayload.data, 1, Minecraft.getMinecraft().theWorld);
-			if (lemaid == null) return;
-			LMRNetwork.syncPayLoad(lmode, lemaid, Arrays.copyOfRange(pPayload.data, 5, pPayload.data.length));
+			lemaid = Minecraft.getMinecraft().theWorld.getEntityByID(pPayload.getEntityId());
+			if (!(lemaid instanceof EntityLittleMaid)) return;
+
+			LMRNetwork.syncPayLoad(lmode, (EntityLittleMaid)lemaid, pPayload.getTag());
 		}
-		clientPayLoad(lmode, lemaid, Arrays.copyOfRange(pPayload.data, lmode.withEntity?5:1, pPayload.data.length));
+		clientPayLoad(lmode, (EntityLittleMaid) lemaid, pPayload.getTag());
 	}
-	
-	private static void clientPayLoad(EnumPacketMode pMode, EntityLittleMaid lemaid, byte[] contents) {
+
+	private static void clientPayLoad(LMRMessage.EnumPacketMode pMode, EntityLittleMaid lemaid, NBTTagCompound tagCompound) {
 		switch (pMode) {
 		case CLIENT_SWINGARM :
 			// 腕振り
-			byte larm = contents[0];
-			EnumSound lsound = EnumSound.getEnumSound(NetworkHelper.getIntFromPacket(contents, 1));
-			lemaid.setSwinging(larm, lsound, NetworkHelper.getIntFromPacket(contents, 5)==1);
-//			mod_LMM_littleMaidMob.Debug(String.format("SwingSound:%s", lsound.name()));
+			byte larm = tagCompound.getByte("Arm");
+			EnumSound lsound = EnumSound.getEnumSound(tagCompound.getInteger("Sound"));
+			lemaid.setSwinging(larm, lsound, tagCompound.getBoolean("Force"));
 			break;
 
 		case CLIENT_RESPOND_IFF :
 			// IFFの設定値を受信
-			int lval = contents[0];
-			int lindex = NetworkHelper.getIntFromPacket(contents, 1);
-			String lname = (String)IFF.DefaultIFF.keySet().toArray()[lindex];
-			LittleMaidReengaged.Debug("setIFF-CL %s(%d)=%d", lname, lindex, lval);
-			IFF.setIFFValue(null, lname, lval);
+			byte lval = tagCompound.getByte("Value");
+			String lname = tagCompound.getString("Name");
+
+			LittleMaidReengaged.Debug("setIFF-CL %s=%d", lname, lval);
+			IFF.setIFFValue(Minecraft.getMinecraft().thePlayer.getUniqueID(), lname, lval);
 			break;
 
 		case CLIENT_PLAY_SOUND :
 			// 音声再生
-			EnumSound lsound9 = EnumSound.getEnumSound(NetworkHelper.getIntFromPacket(contents, 0));
-			LittleMaidReengaged.Debug(String.format("playSound:%s", lsound9.name()));
-			lemaid.playSound(lsound9, contents[4]==1);
+			EnumSound sound = EnumSound.getEnumSound(tagCompound.getInteger("Sound"));
+			lemaid.playSound(sound, tagCompound.getBoolean("Force"));
+			LittleMaidReengaged.Debug(String.format("playSound:%s", sound.name()));
 			break;
+
 		case CLIENT_ONDEATH :
 			lemaid.manualOnDeath();
 			break;
+
+		case CLIENT_CURRENT_ITEM:
+			lemaid.maidInventory.currentItem = tagCompound.getInteger("Index");
+			lemaid.setItemStackToSlot(EntityEquipmentSlot.MAINHAND, ItemStack.loadItemStackFromNBT(tagCompound.getCompoundTag("Stack")));
+
 		default:
 			break;
 		}

@@ -3,8 +3,8 @@ package net.blacklab.lmr.entity.ai;
 import java.util.Random;
 
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.blacklab.lmr.entity.EntityLittleMaid;
-import net.blacklab.lmr.entity.mode.EntityModeBase;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.mode.EntityModeBase;
 import net.blacklab.lmr.util.helper.MaidHelper;
 import net.minecraft.entity.EntityCreature;
 import net.minecraft.entity.ai.EntityAIBase;
@@ -13,7 +13,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-public class EntityAILMFleeRain extends EntityAIBase implements IEntityAI {
+public class EntityAILMFleeRain extends EntityAIBase implements IEntityAILM {
 
 	protected EntityCreature theCreature;
 	protected EntityLittleMaid theMaid;

@@ -2,19 +2,20 @@ package net.blacklab.lmr.client.gui;
 
 import java.io.IOException;
 
+import net.blacklab.lmr.network.LMRMessage;
+import net.minecraft.nbt.NBTTagCompound;
 import org.lwjgl.opengl.EXTRescaleNormal;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.entity.maidmodel.TextureBox;
-import net.blacklab.lmr.network.EnumPacketMode;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.translation.I18n;
 
 /**
  * 選択時にサーバーへ染料の使用を通知するための処理。
@@ -27,7 +28,7 @@ public class GuiTextureSelect extends GuiScreen {
 	protected GuiButton modeButton[] = new GuiButton[2];
 	public EntityLittleMaid target;
 	public int canSelectColor;
-	public int selectColor;
+	public byte selectColor;
 	protected boolean toServer;
 
 	public GuiTextureSelect(GuiScreen pOwner, EntityLittleMaid pTarget, int pColor, boolean pToServer) {
@@ -84,7 +85,10 @@ public class GuiTextureSelect extends GuiScreen {
 					// 色情報の設定
 //					theMaid.maidColor = selectPanel.color | 0x010000 | (selectColor << 8);
 					// サーバーへ染料の使用を通知
-					target.syncNet(EnumPacketMode.SERVER_DECREMENT_DYE, new byte[]{(byte) selectColor});
+					NBTTagCompound tagCompound = new NBTTagCompound();
+					tagCompound.setByte("Color", selectColor);
+
+					target.syncNet(LMRMessage.EnumPacketMode.SERVER_DECREMENT_DYE, tagCompound);
 				}
 			}
 			break;
@@ -129,7 +133,7 @@ public class GuiTextureSelect extends GuiScreen {
 	public void drawScreen(int par1, int par2, float par3) {
 		drawDefaultBackground();
 		selectPanel.drawScreen(par1, par2, par3);
-		drawCenteredString(mc.fontRendererObj, I18n.translateToLocal(screenTitle), width / 2, 4, 0xffffff);
+		drawCenteredString(mc.fontRendererObj, I18n.format(screenTitle), width / 2, 4, 0xffffff);
 		
 		super.drawScreen(par1, par2, par3);
 		

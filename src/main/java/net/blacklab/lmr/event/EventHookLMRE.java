@@ -3,20 +3,22 @@ package net.blacklab.lmr.event;
 import net.blacklab.lib.vevent.SubscribeVEvent;
 import net.blacklab.lmr.LittleMaidReengaged;
 import net.blacklab.lmr.api.event.EventLMRE;
-import net.blacklab.lmr.api.mode.UtilModeFarmer;
 import net.blacklab.lmr.client.entity.EntityLittleMaidAvatarSP;
-import net.blacklab.lmr.entity.EntityLittleMaid;
-import net.blacklab.lmr.entity.EntityLittleMaidAvatarMP;
-import net.blacklab.lmr.entity.IEntityLittleMaidAvatar;
-import net.blacklab.lmr.entity.mode.EntityMode_Basic;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaidAvatarMP;
+import net.blacklab.lmr.entity.littlemaid.IEntityLittleMaidAvatar;
+import net.blacklab.lmr.entity.littlemaid.mode.EntityMode_Basic;
+import net.blacklab.lmr.entity.littlemaid.mode.EntityMode_Farmer;
 import net.blacklab.lmr.util.helper.ItemHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.projectile.EntityArrow;
 import net.minecraft.init.Items;
+import net.minecraft.item.ItemHoe;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+import net.minecraftforge.common.IPlantable;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -103,7 +105,7 @@ public class EventHookLMRE
 		EntityPlayer player = event.getEntityPlayer();
 		if (player instanceof EntityLittleMaidAvatarMP) {
 			EntityLittleMaid maid = ((EntityLittleMaidAvatarMP) player).avatar;
-			maid.addMaidExperience(event.getOrb().getXpValue()/(maid.getExpBooster()*10f));
+			maid.addMaidExperience(event.getOrb().getXpValue() / (maid.getExpBooster() * 10f));
 			maid.playSound("random.orb");
 			event.getOrb().setDead();
 			event.setCanceled(true);
@@ -112,25 +114,22 @@ public class EventHookLMRE
 
 	public static boolean deleteDoppelganger(boolean loading, World worldObj, Entity entity) {
 		// ドッペル対策
-		if (LittleMaidReengaged.cfg_antiDoppelganger/* && maidAnniversary > 0L*/) {
-			for (int i = 0; i < worldObj.loadedEntityList.size(); i++) {
-				Entity entity1 = (Entity)worldObj.loadedEntityList.get(i);
-
+		for (int i = 0; i < worldObj.loadedEntityList.size(); i++) {
+			Entity entity1 = (Entity)worldObj.loadedEntityList.get(i);
 				if (!entity1.isDead && entity1 instanceof EntityLivingBase) {
-					EntityLivingBase elm = (EntityLivingBase)entity1;
-					if (elm.equals(entity)) continue;
+				EntityLivingBase elm = (EntityLivingBase)entity1;
+				if (elm.equals(entity)) continue;
 
-					boolean c1 = elm.getClass().getName().equals(entity.getClass().getName());
-					boolean c2 = elm.getUniqueID().equals(entity.getUniqueID());
+				boolean c1 = elm.getClass().getName().equals(entity.getClass().getName());
+				boolean c2 = elm.getUniqueID().equals(entity.getUniqueID());
 
-					if (c1 && c2) {
-						LittleMaidReengaged.Debug("REMOVE DOPPELGANGER UUID %s", entity.getUniqueID());
+				if (c1 && c2) {
+					LittleMaidReengaged.Debug("REMOVE DOPPELGANGER UUID %s", entity.getUniqueID());
 
-						if (entity.getEntityId() > elm.getEntityId()) {
-							elm.setDead();
-						} else {
-							return true;
-						}
+					if (entity.getEntityId() > elm.getEntityId()) {
+						elm.setDead();
+					} else {
+						return true;
 					}
 				}
 			}
@@ -144,16 +143,15 @@ public class EventHookLMRE
 		EntityLittleMaid maid = event.maid;
 		ItemStack stack = event.stack;
 
-		if(ItemHelper.isSugar(stack.getItem()) || stack.getItem() == Items.clock){
+		if(ItemHelper.isSugar(stack.getItem()) || stack.getItem() == Items.CLOCK){
 			event.setCanceled(true);
 		}
 
-		if(maid.getMaidModeInt()==EntityMode_Basic.mmode_FarmPorter){
-			if(UtilModeFarmer.isSeed(maid.getMaidMasterUUID(), stack.getItem())||UtilModeFarmer.isHoe(maid, stack)){
+		if(maid.getMaidModeString().equals(EntityMode_Basic.mmode_FarmPorter)){
+			if(event.maidStackIndex <= 13
+					&& maid.getModeTrigger().isTriggerable(EntityMode_Farmer.mtrigger_Seed, stack, IPlantable.class)
+					|| maid.getModeTrigger().isTriggerable(EntityMode_Farmer.mtrigger_Hoe, stack, ItemHoe.class)){
 				event.setCanceled(true);
-			}
-			if(event.maidStackIndex>13){
-				event.setCanceled(false);
 			}
 		}
 	}

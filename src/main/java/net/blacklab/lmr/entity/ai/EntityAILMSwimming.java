@@ -1,11 +1,12 @@
 package net.blacklab.lmr.entity.ai;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.util.helper.MaidHelper;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.ai.EntityAISwimming;
-import net.minecraft.pathfinding.PathEntity;
+import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathPoint;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -21,13 +22,13 @@ public class EntityAILMSwimming extends EntityAISwimming {
 
 	@Override
 	public boolean shouldExecute() {
-		return theEntity.isInWater() || theEntity.isInsideOfMaterial(Material.water) || theEntity.isInLava();
+		return theEntity.isInWater() || theEntity.isInsideOfMaterial(Material.WATER) || theEntity.isInLava();
 	}
 
 	@Override
 	public void updateTask() {
 		super.updateTask();
-		
+
 		double totalmotionY = 0d;
 		if(theEntity instanceof EntityLittleMaid){
 			if(theEntity.isInLava()){
@@ -49,7 +50,7 @@ public class EntityAILMSwimming extends EntityAISwimming {
 //				}
 
 				PathPoint pathPoint = null;
-				PathEntity pathEntity = theMaid.getNavigator().getPath();
+				Path pathEntity = theMaid.getNavigator().getPath();
 
 				// Main AI
 				if(pathEntity!=null){
@@ -59,20 +60,22 @@ public class EntityAILMSwimming extends EntityAISwimming {
 					totalmotionY +=		((pathPoint.yCoord>=y)?1:-1) * theMaid.getAIMoveSpeed()/3d;
 				}
 
-				if(theMaid.isInWater()){
-					IBlockState iState;
-
-					// Going ashore
-					if (pathPoint != null && Math.abs(pathPoint.yCoord - yd) < 3d && Math.pow(pathPoint.xCoord - xd, 2) + Math.pow(pathPoint.zCoord - zd, 2) < 9d &&
-							(iState = theMaid.worldObj.getBlockState(new BlockPos(pathPoint.xCoord, pathPoint.yCoord + 1, pathPoint.zCoord)))
-							.getBlock().getMaterial(iState) != Material.water) {
-						totalmotionY += 0.05D;
-					}
-					theMaid.motionY = totalmotionY;
-				}
 				// Breathing
 				if (theMaid.getAir() <= 0) {
 					theMaid.motionY += 0.1D;
+				}
+				
+				if (MaidHelper.canStartFollow(theMaid)) {
+					// Move 
+					IBlockState iState;
+					
+					// Going ashore
+					if (pathPoint != null && Math.abs(pathPoint.yCoord - yd) < 3d && Math.pow(pathPoint.xCoord - xd, 2) + Math.pow(pathPoint.zCoord - zd, 2) < 9d &&
+							(iState = theMaid.worldObj.getBlockState(new BlockPos(pathPoint.xCoord, pathPoint.yCoord + 1, pathPoint.zCoord)))
+							.getBlock().getMaterial(iState) != Material.WATER) {
+						totalmotionY += 0.05D;
+					}
+					theMaid.motionY = totalmotionY;
 				}
 			}
 		}

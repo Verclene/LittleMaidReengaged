@@ -17,7 +17,7 @@ import net.blacklab.lmr.util.FileList;
 import net.minecraft.client.resources.DefaultResourcePack;
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.client.resources.data.IMetadataSection;
-import net.minecraft.client.resources.data.IMetadataSerializer;
+import net.minecraft.client.resources.data.MetadataSerializer;
 import net.minecraft.util.ResourceLocation;
 
 /**
@@ -42,10 +42,10 @@ public class SoundResourcePack implements IResourcePack {
 	private InputStream getResourceStream(ResourceLocation resource) {
 		InputStream lis = null;
 		if (resource.getResourcePath().endsWith("sounds.json")) {
-			return FileList.COMMON_CLASS_LOADER.getResourceAsStream("LittleMaidReengaged/sounds.json");
+			return LittleMaidReengaged.class.getClassLoader().getResourceAsStream("LittleMaidReengaged/sounds.json");
 		}
 		if (resource.getResourcePath().endsWith(".ogg")) {
-			lis = FileList.COMMON_CLASS_LOADER.getResourceAsStream(decodePathGetPath(resource));
+			lis = LittleMaidReengaged.class.getClassLoader().getResourceAsStream(decodePathGetPath(resource));
 		}
 		return lis;
 	}
@@ -95,7 +95,7 @@ public class SoundResourcePack implements IResourcePack {
 	}
 
 	@Override
-	public IMetadataSection getPackMetadata(IMetadataSerializer par1MetadataSerializer, String par2Str)
+	public IMetadataSection getPackMetadata(MetadataSerializer par1MetadataSerializer, String par2Str)
 	{ //throws IOException {
 		return null;
 	}

@@ -10,23 +10,24 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.blacklab.lmr.entity.EntityLittleMaid;
-import net.blacklab.lmr.network.EnumPacketMode;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.network.LMRMessage;
 import net.blacklab.lmr.network.LMRNetwork;
 import net.blacklab.lmr.util.IFF;
-import net.blacklab.lmr.util.helper.NetworkHelper;
+import net.blacklab.lmr.util.helper.CommonHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiSlot;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.IEntityOwnable;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
-import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.World;
 
 public class GuiIFF extends GuiScreen {
@@ -52,25 +53,27 @@ public class GuiIFF extends GuiScreen {
 		super.handleMouseInput();
 		selectPanel.handleMouseInput();
 	}
-	
+
 	public GuiIFF(World world, EntityPlayer player, EntityLittleMaid pEntity) {
 		super();
-		entityMap = new TreeMap<String, Entity>();
+		entityMap = new TreeMap<>();
 		initEntitys(world, true);
 
-		screenTitle = I18n.translateToLocal("littleMaidMob.gui.iff.title");
+		screenTitle = I18n.format("littleMaidMob.gui.iff.title");
 		target = pEntity;
 		thePlayer = player;
-	
+
 		// IFFをサーバーから取得
 		if (!Minecraft.getMinecraft().isSingleplayer()) {
 			int li = 0;
-			for (String ls : IFF.DefaultIFF.keySet()) {
-				byte ldata[] = new byte[4 + ls.length()];
-				NetworkHelper.setIntToPacket(ldata, 0, li);
-				NetworkHelper.setStrToPacket(ldata, 4, ls);
+			for (String ls : IFF.getUserIFF(player.getUniqueID()).keySet()) {
+				// TODO Too much packet with many entities
+				NBTTagCompound tagCompound = new NBTTagCompound();
+				tagCompound.setInteger("Index", li);
+				tagCompound.setString("Name", ls);
+
 				LittleMaidReengaged.Debug("RequestIFF %s(%d)", ls, li);
-				LMRNetwork.sendToServer(EnumPacketMode.SERVER_REQUEST_IFF, ldata);
+				LMRNetwork.sendPacketToServer(LMRMessage.EnumPacketMode.SERVER_REQUEST_IFF, null, tagCompound);
 				li++;
 			}
 		}
@@ -80,7 +83,7 @@ public class GuiIFF extends GuiScreen {
 		// 表示用EntityListの初期化
 		if (entityMapClass.isEmpty()) {
 			try {
-				Map lmap = EntityList.classToStringMapping;// (Map)ModLoader.getPrivateValue(EntityList.class, null, 1);
+				Map lmap = EntityList.CLASS_TO_NAME;// (Map)ModLoader.getPrivateValue(EntityList.class, null, 1);
 				entityMapClass.putAll(lmap);
 			}
 			catch (Exception e) {
@@ -119,7 +122,7 @@ public class GuiIFF extends GuiScreen {
 
 		drawDefaultBackground();
 		selectPanel.drawScreen(px, py, pf);
-		drawCenteredString(this.mc.fontRendererObj, I18n.translateToLocal(screenTitle), width / 2, 20, 0xffffff);
+		drawCenteredString(this.mc.fontRendererObj, I18n.format(screenTitle), width / 2, 20, 0xffffff);
 		super.drawScreen(px, py, pf);
 
 /*
@@ -190,38 +193,29 @@ public class GuiIFF extends GuiScreen {
 
 	public void clickSlot(int pIndex, boolean pDoubleClick, String pName, EntityLivingBase pEntity) {
 		if (pDoubleClick) {
-			int tt = IFF.getIFF(null, pName, pEntity.worldObj);
+			byte tt = IFF.getIFF(CommonHelper.getPlayerUUID(thePlayer), pName, pEntity.worldObj);
 			tt++;
 			if (tt > 2) {
 				tt = 0;
 			}
 
-			if (!mc.isSingleplayer()) {
-				// サーバーへ変更値を送る。
-				int li = 0;
-				for (String ls : IFF.DefaultIFF.keySet()) {
-					if (ls.contains(pName)) {
-						byte[] ldata = new byte[pName.length() + 5];
-						ldata[0] = (byte) tt;
-						NetworkHelper.setIntToPacket(ldata, 1, li);
-						NetworkHelper.setStrToPacket(ldata, 5, pName);
-						LittleMaidReengaged.Debug("SendIFF %s(%d) = %d", pName, li, tt);
-						LMRNetwork.sendToServer(EnumPacketMode.SERVER_CHANGE_IFF, ldata);
-					}
-					li++;
-				}
-			} else {
-				IFF.setIFFValue(null, pName, tt);
-			}
+			IFF.setIFFValue(CommonHelper.getPlayerUUID(thePlayer), pName, tt);
+
+			// サーバーへ変更値を送る。
+			int li = 0;
+			NBTTagCompound tagCompound = new NBTTagCompound();
+			tagCompound.setByte("Value", tt);
+			tagCompound.setString("Name", pName);
+			LMRNetwork.sendPacketToServer(LMRMessage.EnumPacketMode.SERVER_CHANGE_IFF, -1, tagCompound);
 
 			Entity player = mc.thePlayer;
-			player.playSound(SoundEvent.soundEventRegistry.getObject(new ResourceLocation("ui.button.click")), 1, 1);
+			player.playSound(SoundEvent.REGISTRY.getObject(new ResourceLocation("ui.button.click")), 1, 1);
 		}
 	}
 
 	public void drawSlot(int pSlotindex, int pX, int pY, int pDrawheight, String pName, Entity pEntity) {
 		// 名前と敵味方識別の描画
-		int tt = IFF.getIFF(null, pName, pEntity.worldObj);
+		int tt = IFF.getIFF(CommonHelper.getPlayerUUID(thePlayer), pName, pEntity.worldObj);
 		int c = 0xffffff;
 		switch (tt) {
 		case IFF.iff_Friendry:

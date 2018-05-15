@@ -2,10 +2,10 @@ package net.blacklab.lmr.entity.ai;
 
 import net.blacklab.lib.minecraft.vector.VectorUtil;
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.blacklab.lmr.entity.EntityLittleMaid;
-import net.blacklab.lmr.entity.IEntityLittleMaidAvatar;
-import net.blacklab.lmr.entity.mode.EntityMode_Archer;
-import net.blacklab.lmr.entity.mode.EntityMode_Playing;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.IEntityLittleMaidAvatar;
+import net.blacklab.lmr.entity.littlemaid.mode.EntityMode_Archer;
+import net.blacklab.lmr.entity.littlemaid.mode.EntityMode_Playing;
 import net.blacklab.lmr.inventory.InventoryLittleMaid;
 import net.blacklab.lmr.util.EnumSound;
 import net.blacklab.lmr.util.SwingStatus;
@@ -24,7 +24,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 
-public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
+public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAILM {
 
 	protected boolean fEnable;
 
@@ -82,8 +82,8 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 			return false;
 		}
 
-		if (fMaid.getMaidModeInt() == EntityMode_Archer.mmode_Archer ||
-				fMaid.getMaidModeInt() == EntityMode_Archer.mmode_Blazingstar) {
+		if (fMaid.getMaidModeString().equals(EntityMode_Archer.mmode_Archer) ||
+				fMaid.getMaidModeString().equals(EntityMode_Archer.mmode_Blazingstar)) {
 //			for (ItemStack stack: fMaid.maidInventory.mainInventory) {
 //				if (stack != null && stack.getItem()==Items.arrow || TriggerSelect.checkWeapon(fMaid.getMaidMasterUUID(), "Arrow", stack)) {
 			// Cannot see
@@ -120,9 +120,7 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 	@Override
 	public void resetTask() {
 		fTarget = null;
-//		fAvatar.stopUsingItem();
-		fAvatar.stopActiveHand();
-//		fAvatar.clearItemInUse();
+		fAvatar.resetActiveHand();
 		fForget=0;
 	}
 
@@ -143,7 +141,7 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 			fMaid.posZ += dtz / distTarget * 1.0;	// 1m 目標に近づける
 		}
 
-		double lrange = 225D;
+		double lrange = 15 * 15;
 		double ldist = fMaid.getDistanceSqToEntity(fTarget);
 		boolean lsee = fMaid.getEntitySenses().canSee(fTarget)/* &&
 				VectorUtil.canMoveThrough(
@@ -182,6 +180,7 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 				double atl = atx * atx + aty * aty + atz * atz;
 				double il = -1D;
 				double milsq = 10D;
+
 				Entity masterEntity = fMaid.getMaidMasterEntity();
 				if (masterEntity != null && !fMaid.isPlaying()) {
 					// 主とのベクトル
@@ -213,13 +212,17 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 					Entity lentity = CommonHelper.getRayTraceEntity(fMaid.maidAvatar, tpr + 1.0F, 1.0F, 1.0F);
 					ItemStack headstack = fInventory.armorInventory[3];
 					Item helmid = headstack == null ? null : headstack.getItem();
-					if (helmid == Items.diamond_helmet || helmid == Items.golden_helmet) {
+
+					/*
+					if (helmid == Items.DIAMOND_HELMET || helmid == Items.GOLDEN_HELMET) {
 						// 射線軸の確認
 						if (lentity != null && fMaid.getIFF(lentity)) {
 							lcanattack = false;
 //							mod_LMM_littleMaidMob.Debug("ID:%d-friendly fire to ID:%d.", fMaid.entityId, lentity.entityId);
 						}
 					}
+					*/
+
 					if (lentity == fTarget) {
 						ldotarget = true;
 					}
@@ -268,7 +271,7 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 							if (!getAvatarIF().isUsingItemLittleMaid()) {
 								// 構え
 								if (!fMaid.weaponFullAuto || lcanattack) {
-									int at = ((helmid == Items.iron_helmet) || (helmid == Items.diamond_helmet)) ? 26 : 16;
+									int at = ((helmid == Items.IRON_HELMET) || (helmid == Items.DIAMOND_HELMET)) ? 26 : 16;
 									if (swingState.attackTime < at) {
 										ActionResult<ItemStack> result = litemstack.useItemRightClick(worldObj, fAvatar, EnumHand.MAIN_HAND);
 										if (result.getType() != EnumActionResult.SUCCESS) {
@@ -281,8 +284,9 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 										LittleMaidReengaged.Debug("id:%d redygun.", fMaid.getEntityId());
 									}
 								} else {
-									if(fMaid.maidMode!=EntityMode_Playing.mmode_Playing)
-										LittleMaidReengaged.Debug(String.format("ID:%d-friendly fire FullAuto.", fMaid.getEntityId()));
+									// TODO FOR DEBUG
+//									if(fMaid.maidMode!=EntityMode_Playing.mmode_Playing)
+//										LittleMaidReengaged.Debug(String.format("ID:%d-friendly fire FullAuto.", fMaid.getEntityId()));
 								}
 							}
 						}
@@ -296,12 +300,12 @@ public class EntityAILMAttackArrow extends EntityAIBase implements IEntityAI {
 									fMaid.setSwing(10, (litemstack.stackSize == itemcount) ? EnumSound.shoot_burst : EnumSound.Null, !fMaid.isPlaying());
 									LittleMaidReengaged.Debug(String.format("id:%d throw weapon.(%d:%f:%f)", fMaid.getEntityId(), swingState.attackTime, fMaid.rotationYaw, fMaid.rotationYawHead));
 									swingState.attackTime = 5;
-									if (fMaid.maidMode == EntityMode_Playing.mmode_Playing) {
+									if (!fMaid.maidMode.equals("Playing")) {
 										fMaid.setMaidWaitCount(10);
 //										return;
 									}
 								} else {
-									if(fMaid.maidMode!=EntityMode_Playing.mmode_Playing)
+									if(!fMaid.maidMode.equals("Playing"))
 										LittleMaidReengaged.Debug(String.format("ID:%d-friendly fire throw weapon.", fMaid.getEntityId()));
 								}
 							}

@@ -2,9 +2,7 @@ package net.blacklab.lmr;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -13,7 +11,7 @@ import net.blacklab.lib.vevent.VEventBus;
 import net.blacklab.lmr.achievements.AchievementsLMRE;
 import net.blacklab.lmr.client.resource.OldZipTexturesWrapper;
 import net.blacklab.lmr.client.resource.SoundResourcePack;
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.blacklab.lmr.event.EventHookLMRE;
 import net.blacklab.lmr.item.ItemMaidPorter;
 import net.blacklab.lmr.item.ItemMaidSpawnEgg;
@@ -23,10 +21,11 @@ import net.blacklab.lmr.network.LMRNetwork;
 import net.blacklab.lmr.network.ProxyCommon;
 import net.blacklab.lmr.util.DevMode;
 import net.blacklab.lmr.util.FileList;
-import net.blacklab.lmr.util.FileList.CommonClassLoaderWrapper;
 import net.blacklab.lmr.util.IFF;
 import net.blacklab.lmr.util.helper.CommonHelper;
+import net.blacklab.lmr.util.manager.EntityModeHandler;
 import net.blacklab.lmr.util.manager.EntityModeManager;
+import net.blacklab.lmr.util.manager.LoaderSearcher;
 import net.blacklab.lmr.util.manager.ModelManager;
 import net.blacklab.lmr.util.manager.StabilizerManager;
 import net.minecraft.client.Minecraft;
@@ -36,8 +35,11 @@ import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.biome.Biome;
+import net.minecraftforge.common.BiomeDictionary;
+//github.com/Verclene/LittleMaidReengaged.git
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
@@ -55,16 +57,15 @@ import net.minecraftforge.fml.common.registry.GameRegistry;
 		name = "LittleMaidReengaged",
 		version = LittleMaidReengaged.VERSION,
 		acceptedMinecraftVersions=LittleMaidReengaged.ACCEPTED_MCVERSION,
-		dependencies = LittleMaidReengaged.DEPENDENCIES,
-		updateJSON = "http://mc.el-blacklab.net/lmr-version.json")
+		dependencies = LittleMaidReengaged.DEPENDENCIES/*,
+		updateJSON = "http://mc.el-blacklab.net/lmr-version.json"*/)
 public class LittleMaidReengaged {
 
 	public static final String DOMAIN = "lmreengaged";
-	public static final String VERSION = "7.1.8.41";
-	public static final String ACCEPTED_MCVERSION = "[1.9,1.9.100)";
-	public static final int VERSION_CODE = 1;
-	public static final String DEPENDENCIES = "required-after:Forge@[1.9-12.16.0.1819,);"
-			+ "required-after:net.blacklab.lib@[5.2.0.3,)";
+	public static final String VERSION = "8.1.6.141";
+	public static final String ACCEPTED_MCVERSION = "[1.9.4,1.10.2]";
+	public static final String DEPENDENCIES = "required-after:Forge@[1.9.4-12.17.0.1976,);"
+			+ "required-after:net.blacklab.lib@[6.1.5.8,)";
 
 	/*
 	 * public static String[] cfg_comment = {
@@ -96,15 +97,6 @@ public class LittleMaidReengaged {
 	public static int cfg_maxGroupSize = 3;
 	// @MLProp(info="It will despawn, if it lets things go. ")
 	public static boolean cfg_canDespawn = false;
-	// @MLProp(info="At local, make sure the name of the owner. ")
-	public static boolean cfg_checkOwnerName = false;
-	// @MLProp(info="Not to survive the doppelganger. ")
-	public static boolean cfg_antiDoppelganger = true;
-	// @MLProp(info="Enable LMM SpawnEgg Recipe. ")
-	public static boolean cfg_enableSpawnEgg = true;
-
-	// @MLProp(info="LittleMaid Voice distortion.")
-	public static boolean cfg_VoiceDistortion = false;
 
 	// @MLProp(info="Print Debug Massages.")
 	public static boolean cfg_PrintDebugMessage = false;
@@ -117,21 +109,14 @@ public class LittleMaidReengaged {
 	// 野生テクスチャ
 	public static boolean cfg_isFixedWildMaid = false;
 
-	// LivingSoundRate
-	public static float cfg_voiceRate = 0.1f;
-
-	// @MLProp(info="true: AlphaBlend(request power), false: AlphaTest(more fast)")
-	// public static boolean AlphaBlend = true;
-	// @MLProp(info="true: Will be hostile, false: Is a pacifist")
-	public static boolean cfg_Aggressive = true;
-	public static int cfg_maidOverdriveDelay = 64;
+	public static final float cfg_voiceRate = 0.2f;
 
 	@SidedProxy(clientSide = "net.blacklab.lmr.network.ProxyClient", serverSide = "net.blacklab.lmr.network.ProxyCommon")
 	public static ProxyCommon proxy;
 
 	@Instance(DOMAIN)
 	public static LittleMaidReengaged instance;
-	
+
 	// Item
 	public static ItemMaidSpawnEgg spawnEgg;
 	public static ItemTriggerRegisterKey registerKey;
@@ -144,8 +129,8 @@ public class LittleMaidReengaged {
 		}
 	}
 
-	public static void Debug(boolean isRemote, String string) {
-		Debug("SIDE=%s, %s", isRemote ? "Client" : "Server", string);
+	public static void Debug(boolean isRemote, String format, Object... pVals) {
+		Debug("Side=%s; ".concat(format), isRemote, pVals);
 	}
 
 	public String getName() {
@@ -158,20 +143,18 @@ public class LittleMaidReengaged {
 	public void preInit(FMLPreInitializationEvent evt) {
 		// MMMLibからの引継ぎ
 		// ClassLoaderを初期化
-		List<URL> urls = new ArrayList<URL>();
-		try {
-			urls.add(FileList.dirMods.toURI().toURL());
-		} catch (MalformedURLException e1) {
-		}
-		if(DevMode.DEVMODE==DevMode.DEVMODE_ECLIPSE){
-			for(File f:FileList.dirDevIncludeClasses){
-				try {
-					urls.add(f.toURI().toURL());
-				} catch (MalformedURLException e) {
-				}
+
+		// Find classpath dir
+		String classpath = System.getProperty("java.class.path");
+		String separator = System.getProperty("path.separator");
+
+		for (String path :
+				classpath.split(separator)) {
+			File pathFile = new File(path);
+			if (pathFile.isDirectory()) {
+				FileList.dirClasspath.add(pathFile);
 			}
 		}
-		FileList.COMMON_CLASS_LOADER = new CommonClassLoaderWrapper(urls.toArray(new URL[]{}), LittleMaidReengaged.class.getClassLoader());
 
 		StabilizerManager.init();
 
@@ -191,64 +174,40 @@ public class LittleMaidReengaged {
 		}
 
 		// FileManager.setSrcPath(evt.getSourceFile());
-		// MMM_Config.init();
+		// MMM_cfg_init();
 
 		// MMMLibのRevisionチェック
 		// MMM_Helper.checkRevision("6");
-		// MMM_Config.checkConfig(this.getClass());
+		// MMM_cfg_checkConfig(this.getClass());
 
 		randomSoundChance = new Random();
 
 		// Config
-		// エラーチェックのため試験的にimportしない形にしてみる
-		ConfigList cfg = new ConfigList();
-		try {
-			cfg.loadConfig(getName(), evt);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		cfg_Aggressive = cfg.getBoolean("Aggressive", true);
-		cfg_antiDoppelganger = cfg.getBoolean("antiDoppelganger", true);
-		cfg.setComment("canDespawn", "Whether a LittleMaid(no-contract) can despawn.");
-		cfg_canDespawn = cfg.getBoolean("canDespawn", false);
-		cfg.setComment("checkOwnerName", "Recommended to keep 'true'. If 'true', on SMP, each player can tame his/her own maids.");
-		cfg_checkOwnerName = cfg.getBoolean("checkOwnerName", true);
-		cfg.setComment("DeathMessage", "Print chat message when your maid dies.");
-		cfg_DeathMessage = cfg.getBoolean("DeathMessage", true);
-		cfg.setComment("VoiceDistortion", "If 'true', voices distorts like as vanila mobs.");
-		cfg_VoiceDistortion = cfg.getBoolean("VoiceDistortion", false);
-		cfg_Dominant = cfg.getBoolean("Dominant", false);
-		cfg.setComment("enableSpawnEgg", "If 'true', you can use a recipe of LittleMaid SpawnEgg.");
-		cfg_enableSpawnEgg = cfg.getBoolean("enableSpawnEgg", true);
-		cfg.setComment("maxGroupSize", "This config adjusts LittleMaids spawning.");
-		cfg_maxGroupSize = cfg.getInt("maxGroupSize", 3);
-		cfg.setComment("minGroupSize", "This config adjusts LittleMaids spawning.");
-		cfg_minGroupSize = cfg.getInt("minGroupSize", 1);
-		cfg.setComment("spawnLimit", "This config adjusts LittleMaids spawning.");
-		cfg_spawnLimit = cfg.getInt("spawnLimit", 20);
-		cfg.setComment("spawnWeight", "This config adjusts LittleMaids spawning.");
-		cfg_spawnWeight = cfg.getInt("spawnWeight", 5);
-		cfg.setComment("PrintDebugMessage", "Output messages for debugging to log. Usually this should be 'false'.");
-		cfg_PrintDebugMessage = cfg.getBoolean("PrintDebugMessage", false);
-		cfg.setComment("isModelAlphaBlend", "If 'false', alpha-blend of textures is disabled.");
-		cfg_isModelAlphaBlend = cfg.getBoolean("isModelAlphaBlend", true);
-		cfg.setComment("isFixedWildMaid", "If 'true', additional textures of LittleMaid(no-contract) will never used.");
-		cfg_isFixedWildMaid = cfg.getBoolean("isFixedWildMaid", false);
-		cfg_voiceRate = cfg.getFloat("voiceRate", 0.2f);
-		cfg.setComment("voiceRate", "Ratio of playing non-force sound");
+		Configuration cfg = new Configuration(evt.getSuggestedConfigurationFile());
+		cfg.load();
 
-		cfg_maidOverdriveDelay = cfg.getInt("maidOverdriveDelay", 32);
-		if (cfg_maidOverdriveDelay < 1) {
-			cfg_maidOverdriveDelay = 1;
-		} else if (cfg_maidOverdriveDelay > 128) {
-			cfg_maidOverdriveDelay = 128;
-		}
+		cfg_canDespawn = cfg.getBoolean("canDespawn", "General", false,
+				"Set whether non-contracted maids can despawn.");
+		cfg_DeathMessage = cfg.getBoolean("deathMessage", "General", true,
+				"Set whether prints death message of maids.");
+		cfg_Dominant = cfg.getBoolean("Dominant", "Advanced", false,
+				"Recommended to keep 'false'. If true, non-vanilla check is used for maid spawning.");
+		cfg_maxGroupSize = cfg.getInt("maxGroupSize", "Advanced", 3, 1, 20,
+				"Settings for maid spawning. Recommended to keep default.");
+		cfg_minGroupSize = cfg.getInt("minGroupSize", "Advanced", 1, 1, 20,
+				"Settings for maid spawning. Recommended to keep default.");
+		cfg_spawnLimit = cfg.getInt("spawnLimit", "Advanced", 20, 1, 30,
+				"Settings for maid spawning. Recommended to keep default.");
+		cfg_spawnWeight = cfg.getInt("spawnWeight", "Advanced", 5, 1, 9,
+				"Settings for maid spawning. Recommended to keep default.");
+		cfg_PrintDebugMessage = cfg.getBoolean("PrintDebugMessage", "Advanced", false,
+				"Print debug logs. Recommended to keep default.");
+		cfg_isModelAlphaBlend = cfg.getBoolean("isModelAlphaBlend", "Advanced", true,
+				"If your graphics SHOULD be too powerless to draw alpha-blend textures, turn this 'false'.");
+		cfg_isFixedWildMaid = cfg.getBoolean("isFixedWildMaid", "General", false,
+				"If 'true', only default-texture maid spawns. You can still change their textures after employing.");
 
-		try {
-			cfg.saveConfig(getName(), evt);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		cfg.save();
 
 //		latestVersion = Version.getLatestVersion("http://mc.el-blacklab.net/lmmnxversion.txt", 10000);
 
@@ -257,21 +216,20 @@ public class LittleMaidReengaged {
 
 		spawnEgg = new ItemMaidSpawnEgg();
 		GameRegistry.<Item>register(spawnEgg, new ResourceLocation(DOMAIN, "spawn_littlemaid_egg"));
-		if (cfg_enableSpawnEgg) {
-			GameRegistry.addRecipe(
-					new ItemStack(spawnEgg, 1),
-					new Object[] { "scs", "sbs", " e ", Character.valueOf('s'),
-							Items.sugar, Character.valueOf('c'),
-							new ItemStack(Items.dye, 1, 3),
-							Character.valueOf('b'), Items.slime_ball,
-							Character.valueOf('e'), Items.egg, });
-		}
+		GameRegistry.addRecipe(
+				new ItemStack(spawnEgg, 1),
+				"scs", "sbs", " e ", Character.valueOf('s'),
+				Items.SUGAR, Character.valueOf('c'),
+				new ItemStack(Items.DYE, 1, 3),
+				Character.valueOf('b'), Items.SLIME_BALL,
+				Character.valueOf('e'), Items.EGG);
 
 		registerKey = new ItemTriggerRegisterKey();
 		GameRegistry.<Item>register(registerKey, new ResourceLocation(DOMAIN, "registerkey"));
-		GameRegistry.addShapelessRecipe(new ItemStack(registerKey), Items.egg,
-				Items.sugar, Items.nether_wart);
-		
+
+		GameRegistry.addShapelessRecipe(new ItemStack(registerKey), Items.EGG,
+				Items.SUGAR, Items.NETHER_WART);
+
 		maidPorter = new ItemMaidPorter();
 		GameRegistry.register(maidPorter, new ResourceLocation(DOMAIN, "maidporter"));
 
@@ -317,28 +275,41 @@ public class LittleMaidReengaged {
 		// MMM_TextureManager.instance.setDefaultTexture(LMM_EntityLittleMaid.class,
 		// MMM_TextureManager.instance.getTextureBox("default_Orign"));
 
-		// Dominant
-		BiomeGenBase[] biomeList = null;
 		if (cfg_spawnWeight > 0) {
-//			if (cfg_Dominant) {
-//				biomeList = BiomeGenBase.bio();
-//			} else {
-				String biomeNameList[] = new String[] { "desert", "plains", "savanna", "mushroom_island", "forest", "birch_forest", "swampland", "taiga", "ice_flats", "mutated_ice_flats" };
-				biomeList = new BiomeGenBase[biomeNameList.length];
-				for (int i=0; i<biomeNameList.length; i++) biomeList[i] = BiomeGenBase.biomeRegistry.getObject(new ResourceLocation(biomeNameList[i]));
-//			}
-			for (BiomeGenBase biome : biomeList) {
-				if (biome != null) {
-					EntityRegistry.addSpawn(EntityLittleMaid.class,
-							cfg_spawnWeight, cfg_minGroupSize,
-							cfg_maxGroupSize, EnumCreatureType.CREATURE, biome);
+			Iterator<Biome> biomeIterator = Biome.REGISTRY.iterator();
+			while(biomeIterator.hasNext()) {
+				Biome biome = biomeIterator.next();
+
+				if(biome != null &&
+						(
+								(BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.HOT) ||
+//										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.COLD) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.WET) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.DRY) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.SAVANNA) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.CONIFEROUS) ||
+//										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.LUSH) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.MUSHROOM) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.FOREST) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.PLAINS) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.SANDY) ||
+//										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.SNOWY) ||
+										BiomeDictionary.isBiomeOfType(biome, BiomeDictionary.Type.BEACH))
+								)
+						)
+				{
+					EntityRegistry.addSpawn(EntityLittleMaid.class, cfg_spawnWeight, cfg_minGroupSize, cfg_maxGroupSize, EnumCreatureType.CREATURE, biome);
+					System.out.println("Registering spawn in " + biome.getBiomeName());
+					Debug("Registering maids to spawn in " + biome.getBiomeName());
 				}
 			}
 		}
 
 		// モードリストを構築
-		EntityModeManager.loadEntityMode();
-		EntityModeManager.showLoadedModes();
+//		EntityModeManager.loadEntityMode();
+//		EntityModeManager.showLoadedModes();
+		LoaderSearcher.INSTANCE.register(EntityModeHandler.class);
+		LoaderSearcher.INSTANCE.startSearch();
 
 		// サウンドのロード
 		// TODO ★ proxy.loadSounds();
@@ -347,5 +318,5 @@ public class LittleMaidReengaged {
 		IFF.loadIFFs();
 
 	}
-	
+
 }

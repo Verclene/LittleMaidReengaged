@@ -3,7 +3,7 @@ package net.blacklab.lmr.item;
 import java.util.List;
 
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.blacklab.lmr.util.TriggerSelect;
+import net.blacklab.lmr.entity.littlemaid.trigger.ModeTrigger;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -13,8 +13,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
 
 public class ItemTriggerRegisterKey extends Item {
@@ -26,7 +25,7 @@ public class ItemTriggerRegisterKey extends Item {
 
 	public ItemTriggerRegisterKey() {
 		setUnlocalizedName(LittleMaidReengaged.DOMAIN + ":registerkey");
-		setCreativeTab(CreativeTabs.tabMisc);
+		setCreativeTab(CreativeTabs.MISC);
 	}
 
 	@Override
@@ -42,14 +41,16 @@ public class ItemTriggerRegisterKey extends Item {
 		String modeString = tagCompound.getString(RK_MODE_TAG);
 
 		// 登録モードを切り替える．
-		index = TriggerSelect.selector.indexOf(modeString) + 1;
-		if(index >= TriggerSelect.selector.size()) index = 0;
+		index = ModeTrigger.getSelectorList().indexOf(modeString);
+		if (index < 0 || index >= ModeTrigger.getSelectorList().size()) {
+			index = 0;
+		}
 
-		modeString = TriggerSelect.selector.get(index);
+//		modeString = TriggerSelect.selector.get(index);
 		tagCompound.setString(RK_MODE_TAG, modeString);
 
-		if(worldIn.isRemote)
-			playerIn.addChatComponentMessage(new TextComponentString(I18n.translateToLocal("littleMaidMob.chat.text.changeregistermode") + modeString));
+		if(!worldIn.isRemote)
+			playerIn.addChatComponentMessage(new TextComponentTranslation("littleMaidMob.chat.text.changeregistermode", modeString));
 
 		return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, itemStackIn);
 	}
@@ -73,8 +74,11 @@ public class ItemTriggerRegisterKey extends Item {
 	public void onUpdate(ItemStack stack, World worldIn, Entity entityIn,
 			int itemSlot, boolean isSelected) {
 		if(!stack.hasTagCompound()){
+			if (ModeTrigger.getSelectorList().size() <= 0) {
+				return;
+			}
 			NBTTagCompound t = new NBTTagCompound();
-			t.setString(RK_MODE_TAG, TriggerSelect.selector.get(0));
+			t.setString(RK_MODE_TAG, ModeTrigger.getSelectorList().get(0));
 			stack.setTagCompound(t);
 		}
 	}

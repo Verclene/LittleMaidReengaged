@@ -182,7 +182,7 @@ public class SoundLoader {
 		}
 
 		// 先にlivingVoiceRateのみを読み込み
-		float livingVoiceRate = LittleMaidReengaged.cfg_voiceRate;
+		float livingVoiceRate = 0.2f;
 		for (String buf: readLines) {
 			if (buf.startsWith("LivingVoiceRate=")) {
 				String vals[] = buf.split("=");
@@ -308,10 +308,6 @@ public class SoundLoader {
 			e.printStackTrace();
 		}
 
-		try {
-			FileList.COMMON_CLASS_LOADER.addURL(jsonDir.toURI().toURL());
-		} catch (MalformedURLException e) {
-		}
 	}
 
 	private void appendPath() {

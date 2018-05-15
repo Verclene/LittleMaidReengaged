@@ -1,12 +1,13 @@
 package net.blacklab.lmr.entity.ai;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
+import net.blacklab.lmr.util.helper.MaidHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.EntityAIBase;
-import net.minecraft.pathfinding.PathEntity;
+import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNavigate;
 
-public class EntityAILMFollowOwner extends EntityAIBase implements IEntityAI {
+public class EntityAILMFollowOwner extends EntityAIBase implements IEntityAILM {
 
 	private EntityLittleMaid theMaid;
 	private Entity theOwner;
@@ -16,7 +17,6 @@ public class EntityAILMFollowOwner extends EntityAIBase implements IEntityAI {
 	private double maxDist;
 	private double minDist;
 	protected double sprintDist;
-	protected double toDistance;
 	protected boolean isEnable;
 
 	public EntityAILMFollowOwner(EntityLittleMaid par1EntityLittleMaid,
@@ -35,39 +35,23 @@ public class EntityAILMFollowOwner extends EntityAIBase implements IEntityAI {
 	public boolean shouldExecute() {
 		if (!isEnable)
 			return false;
-
-		Entity entityliving = theMaid.getOwner();
-		if (entityliving == null) {
-			return false;
-		}
-
-		if (theMaid.isSitting()||theMaid.isMaidWait()) {
-			return false;
-		}
-
-		toDistance = theMaid.getDistanceSqToEntity(entityliving);
-		if (toDistance < theMaid.getActiveModeClass().getDistanceSqToStartFollow() && !theMaid.isInWater()) {
-			return false;
-		}
-		theOwner = entityliving;
-		return true;
+		return MaidHelper.canStartFollow(theMaid);
 	}
 
 	/**
 	 * Returns whether an in-progress EntityAIBase should continue executing
 	 */
 	public boolean continueExecuting() {
-		toDistance = theMaid.getDistanceSqToEntity(theOwner);
 //		if(theMaid.handleWaterMovement()) return !theMaid.isMaidWait()&&!theMaid.isSitting();
 		return !theMaid.getNavigator().noPath()
-				&& (toDistance > theMaid.getActiveModeClass().getDistanceSqToStartFollow())
-				&& !theMaid.isSitting();
+				&& shouldExecute();
 	}
 
 	/**
 	 * Execute a one shot task or start executing a continuous task
 	 */
 	public void startExecuting() {
+		theOwner = theMaid.getMaidMasterEntity();
 		field_48310_h = 0;
 		//lastAvoidWater = petPathfinder.getAvoidsWater();
 		//petPathfinder.setAvoidsWater(false);
@@ -81,7 +65,7 @@ public class EntityAILMFollowOwner extends EntityAIBase implements IEntityAI {
 		theMaid.setSprinting(false);
 		theOwner = null;
 //		if(!theMaid.isInWater()) ((PathNavigateGround)this.theMaid.getNavigator()).setAvoidsWater(true);
-		petPathfinder.clearPathEntity();
+		theMaid.getNavigator().clearPathEntity();
 		//petPathfinder.setAvoidsWater(lastAvoidWater);
 	}
 
@@ -89,6 +73,8 @@ public class EntityAILMFollowOwner extends EntityAIBase implements IEntityAI {
 	 * Updates the task
 	 */
 	public void updateTask() {
+		double toDistance = theMaid.getDistanceSqToEntity(theOwner);
+		
 		if (toDistance - theMaid.getActiveModeClass().getDistanceSqToStartFollow() > 1.0) {
 			theMaid.getLookHelper().setLookPositionWithEntity(theOwner, 10F, theMaid.getVerticalFaceSpeed());
 		}
@@ -106,25 +92,7 @@ public class EntityAILMFollowOwner extends EntityAIBase implements IEntityAI {
 
 		field_48310_h = 10;
 
-		PathEntity entity = theMaid.getNavigator().getPathToEntityLiving(theOwner);
-		/*
-		if(entity==null){
-			if(theMaid.isInWater()&&theMaid.swimmingEnabled){
-				int x = MathHelper.floor_double(theOwner.posX);
-				int z = MathHelper.floor_double(theOwner.posZ);
-				int y = MathHelper.floor_double(theOwner.posY);
-				LMM_LittleMaidMobNX.Debug("TARGET POS %d,%d,%d", x,y,z);
-				if(theMaid.worldObj.getBlockState(new BlockPos(x, y, z)).getBlock().getMaterial()!=Material.water){
-					if(theMaid.worldObj.getBlockState(new BlockPos(x, y-1, z)).getBlock().getMaterial()==Material.water)
-						entity = theMaid.getNavigator().getPathToXYZ(theOwner.posX, theOwner.posY-1, theOwner.posZ);
-					else {
-						theMaid.setLocationAndAngles(x, y+1, z, theMaid.rotationYaw, theMaid.rotationPitch);
-					}
-				}
-			}
-			return;
-		}
-		*/
+		Path entity = theMaid.getNavigator().getPathToEntityLiving(theOwner);
 		theMaid.getNavigator().setPath(entity, moveSpeed);
 	}
 

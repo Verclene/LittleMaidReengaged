@@ -1,6 +1,6 @@
-package net.blacklab.lmr.entity.mode;
+package net.blacklab.lmr.entity.littlemaid.mode;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.minecraft.tileentity.TileEntity;
 
 public abstract class EntityModeBlockBase extends EntityModeBase {
@@ -39,7 +39,7 @@ public abstract class EntityModeBlockBase extends EntityModeBase {
 	}
 
 	@Override
-	public boolean overlooksBlock(int pMode) {
+	public boolean overlooksBlock(String pMode) {
 		if (owner.isTilePos()) {
 			owner.setTilePos(0);
 		}

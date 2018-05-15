@@ -1,4 +1,3 @@
-/build.gradle
 /.settings/
 /.project
 /eclipse/
@@ -9,3 +8,8 @@
 /run/
 /LittleMaidReengaged.1.9_Client.launch
 /LittleMaidReengaged.1.9_Server.launch
+/LittleMaidReengaged.1.9.4_Client.launch
+/LittleMaidReengaged.1.9.4_Server.launch
+/config/
+/crash-reports/
+/logs/

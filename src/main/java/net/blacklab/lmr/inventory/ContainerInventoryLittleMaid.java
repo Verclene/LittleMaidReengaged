@@ -2,7 +2,7 @@ package net.blacklab.lmr.inventory;
 
 import net.blacklab.lmr.LittleMaidReengaged;
 import net.blacklab.lmr.achievements.AchievementsLMRE;
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
@@ -73,7 +73,7 @@ public class ContainerInventoryLittleMaid extends Container {
 				public boolean isItemValid(ItemStack par1ItemStack)
 				{
 					if (par1ItemStack == null) return false;
-					boolean flag = littlemaidInventory.isItemValidForSlot(littlemaidInventory.maxInventorySize+armorIndex, par1ItemStack);
+					boolean flag = littlemaidInventory.isItemValidForSlot(InventoryLittleMaid.maxInventorySize+armorIndex, par1ItemStack);
 					LittleMaidReengaged.Debug("SLOT-INDEX: %d; VALID? %s", getSlotIndex(), flag);
 					return flag;
 				}

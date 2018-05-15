@@ -1,0 +1,37 @@
+sourceSets.main {
+	java.srcDirs project.projectDir.name
+	resources.srcDirs project.projectDir.name
+}
+jar {
+	doFirst {
+		archivesBaseName = "[1.9.4-1.10.x]LittleMaidReengaged"
+	}
+	
+	manifest {
+		attributes 'FMLCorePlugin' : 'net.blacklab.lmr.util.coremod.LMRECoremod'
+		attributes 'FMLCorePluginContainsFMLMod' : 'true'
+	}
+}
+
+task generateChangeLog << {
+	exec {
+		executable "bash"
+		args '-c', '"git log --date=short --pretty=format:\'%ad %an<%ae>%nHASH=%H%n%s%n%b%n\'' +
+				' | sed -E \'s/HASH=(.+)/\\* \\1/g\'' +
+				' | sed -E \'s/(.+)/\\t\\*\\t\\1/g\'' +
+				' | sed -E \'s/\\t\\*\\t([0-9]+-[0-9]+-[0-9]+.+)/\\1/g\' > ChangeLog"'
+	}
+}
+
+// Set arguments -PgenCL to generate ChangeLog(git configure required)
+if (project.hasProperty('genCL')) {
+	generateChangeLog.execute()
+}
+
+tasks.withType(Jar) {compileJava.options.encoding = 'UTF-8'}
+tasks.withType(Jar) {compileApiJava.options.encoding = 'UTF-8'}
+
+// Replace ':EBLib***' to the project of EBLib in your workspace 
+dependencies { compile project(':' + project.name + ':EBLib') }
+
+version = "8.1.6.141"

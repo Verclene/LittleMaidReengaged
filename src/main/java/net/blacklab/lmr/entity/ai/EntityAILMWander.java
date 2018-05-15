@@ -1,10 +1,10 @@
 package net.blacklab.lmr.entity.ai;
 
-import net.blacklab.lmr.entity.EntityLittleMaid;
+import net.blacklab.lmr.entity.littlemaid.EntityLittleMaid;
 import net.minecraft.entity.EntityCreature;
 import net.minecraft.entity.ai.EntityAIWander;
 
-public class EntityAILMWander extends EntityAIWander implements IEntityAI {
+public class EntityAILMWander extends EntityAIWander implements IEntityAILM {
 
 	protected EntityLittleMaid theMaid;
 	protected boolean isEnable;

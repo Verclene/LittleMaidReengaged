@@ -6,13 +6,13 @@ import java.util.UUID;
 import com.mojang.authlib.GameProfile;
 
 import net.blacklab.lmr.LittleMaidReengaged;
-import net.minecraft.block.BlockDirectional;
 import net.minecraft.block.BlockHorizontal;
 import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommand;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
@@ -26,8 +26,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.pathfinding.PathNavigate;
 import net.minecraft.potion.PotionUtils;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
@@ -94,7 +94,7 @@ public class CommonHelper {
 	}
 
 	public static void notifyAdmins(ICommandSender sender, ICommand cmd, int p_152374_2_, String s, Object ... p_152374_4_) {
-		CommandBase.notifyOperators(sender, cmd, p_152374_2_, s, p_152374_4_);
+		CommandBase.notifyCommandListener(sender, cmd, p_152374_2_, s, p_152374_4_);
 	}
 
 	public static boolean setPathToTile(EntityLiving pEntity, TileEntity pTarget, boolean flag) {
@@ -128,7 +128,7 @@ public class CommonHelper {
 		if (par1EntityPlayer == null) {
 			return null;
 		}
-		
+
 		if (par2Index == -1) {
 			par2Index = par1EntityPlayer.inventory.currentItem;
 		}
@@ -136,25 +136,25 @@ public class CommonHelper {
 		if (itemstack1 == null) {
 			return null;
 		}
-		
+
 		if (!par1EntityPlayer.capabilities.isCreativeMode) {
 			// クリエイティブだと減らない
 			itemstack1.stackSize -= par3DecCount;
 		}
-		
+
 		if (itemstack1.getItem() instanceof ItemPotion) {
 			if(itemstack1.stackSize <= 0) {
-				par1EntityPlayer.inventory.setInventorySlotContents(par1EntityPlayer.inventory.currentItem, new ItemStack(Items.glass_bottle, par3DecCount));
+				par1EntityPlayer.inventory.setInventorySlotContents(par1EntityPlayer.inventory.currentItem, new ItemStack(Items.GLASS_BOTTLE, par3DecCount));
 				return null;
 			}
-			par1EntityPlayer.inventory.addItemStackToInventory(new ItemStack(Items.glass_bottle, par3DecCount));
+			par1EntityPlayer.inventory.addItemStackToInventory(new ItemStack(Items.GLASS_BOTTLE, par3DecCount));
 		} else {
 			if (itemstack1.stackSize <= 0) {
 				par1EntityPlayer.inventory.setInventorySlotContents(par2Index, null);
 				return null;
 			}
 		}
-		
+
 		return itemstack1;
 	}
 
@@ -179,15 +179,15 @@ public class CommonHelper {
 			Entity ltarget = null;
 			List llist = pEntity.worldObj.getEntitiesWithinAABBExcludingEntity(pEntity, pEntity.getEntityBoundingBox().addCoord(lvlook.xCoord * pRange, lvlook.yCoord * pRange, lvlook.zCoord * pRange).expand(pExpand, pExpand, pExpand));
 			double ltdistance = pRange * pRange;
-			
+
 			for (int var13 = 0; var13 < llist.size(); ++var13) {
 				Entity lentity = (Entity)llist.get(var13);
-				
+
 				if (lentity.canBeCollidedWith()) {
 					float lexpand = lentity.getCollisionBorderSize() + 0.3F;
 					AxisAlignedBB laabb = lentity.getEntityBoundingBox().expand(lexpand, lexpand, lexpand);
 					RayTraceResult lmop = laabb.calculateIntercept(lvpos, lvview);
-					
+
 					if (laabb.isVecInside(lvpos)) {
 						if (0.0D < ltdistance || ltdistance == 0.0D) {
 							ltarget = lentity;
@@ -195,7 +195,7 @@ public class CommonHelper {
 						}
 					} else if (lmop != null) {
 						double ldis = lvpos.squareDistanceTo(lmop.hitVec);
-						
+
 						if (ldis < ltdistance || ltdistance == 0.0D) {
 							ltarget = lentity;
 							ltdistance = ldis;
@@ -205,5 +205,23 @@ public class CommonHelper {
 			}
 			return ltarget;
 		}
+
+	public static String getDeadSource(DamageSource source) {
+		String ls = source.getDamageType();
+	
+		Entity lentity = source.getSourceOfDamage();
+		if (lentity != null) {
+			if (lentity instanceof EntityPlayer) {
+				ls += ":" + lentity.getName();
+			} else {
+				String lt = EntityList.getEntityString(lentity);
+				if (lt != null) {
+					ls += ":" + lt;
+				}
+			}
+		}
+	
+		return ls;
+	}
 
 }
