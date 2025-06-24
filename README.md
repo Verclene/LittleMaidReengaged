@@ -1,6 +1,12 @@
 # LittleMaidReengaged
 Again, on the new stage.
 
+# ANNOUNCEMENT (2025.06)
+
+Distribution of LMRE have been disabled due to Google Drive's change. 
+Because there are few demands, **links are not going to be resumed, and deleted in August 2025.**
+For recent versions [LMRB](https://forum.civa.jp/viewtopic.php?t=119) is avaliable.
+
 ## What's this?
 A MOD of Minecraft; LittleMaidMob for MC1.9./1.10. Cute and little maid girls will be helpful for your life on Minecraft.
 
